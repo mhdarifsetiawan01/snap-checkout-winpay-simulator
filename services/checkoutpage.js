@@ -51,14 +51,14 @@ async function sendRequest(endpoint, payload, simulate = true) {
   }
 }
 
-async function create(payload, simulate = true) {
+async function createinvoice(payload, simulate = true) {
   return await sendRequest("/api/create", payload, simulate);
 }
 
 /**
  * Find Invoice (GET)
  */
-async function find(invoiceId, simulate = true) {
+async function findinvoice(invoiceId, simulate = true) {
   const path = `/api/find/${invoiceId}`;
   const url = `${CONFIG.CHECKOUT_BASE_URL}${path}`;
   const timestamp = generateTimestamp();
@@ -92,4 +92,4 @@ async function find(invoiceId, simulate = true) {
   }
 }
 
-module.exports = { create, find };
+module.exports = { createinvoice, findinvoice };

@@ -10,13 +10,16 @@ const SERVICES = {
 // Templates
 const TEMPLATES = {
   snap: {
-    create: require("./templates/snap/createVA").createVABody,
-    inquiry: require("./templates/snap/inquiryVA").inquiryVABody,
-    status: require("./templates/snap/paymentStatus").paymentStatusBody
+    // VA
+    createva: require("./templates/snap/createVA").createVABody,
+    inquiryva: require("./templates/snap/inquiryVA").inquiryVABody,
+    statusva: require("./templates/snap/paymentStatus").paymentStatusBody,
+    // QRIS
+    createqris: require("./templates/snap/createVA").createQRISBody,
   },
   checkoutpage: {
-    create: require("./templates/checkoutpage/createInvoice").createInvoiceBody,
-    find: require("./templates/checkoutpage/findInvoice").findInvoiceBody
+    createinvoice: require("./templates/checkoutpage/createInvoice").createInvoiceBody,
+    findinvoice: require("./templates/checkoutpage/findInvoice").findInvoiceBody
   }
 };
 

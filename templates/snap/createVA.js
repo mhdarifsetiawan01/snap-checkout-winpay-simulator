@@ -3,7 +3,7 @@ const { generateTrxId } = require("../../helpers/trxId");
 
 function createVABody() {
   return {
-    customerNo: "089601014551",
+    // customerNo: "089601014551",
     virtualAccountName: "Gajah Mada",
     trxId: generateTrxId(),
     // trxId: "INV-000000023212x2221",
@@ -20,4 +20,20 @@ function createVABody() {
   };
 }
 
-module.exports = { createVABody };
+function createQRISBody() {
+  return {
+    partnerReferenceNo: generateTrxId("ref"),
+    // terminalId: "TERM GIGIH", // jika terminal ada yang lain
+    // subMerchantId: "17000", // jika ingin generate qris untuk submerchant
+    amount: {
+      value: "50000.00",
+      currency: "IDR"
+    },
+    validityPeriod: generateTimestamp(3),
+    additionalInfo: {
+      isStatic: false
+  }
+  };
+}
+
+module.exports = { createVABody, createQRISBody };

@@ -16,6 +16,10 @@ const SNAP_MERCHANT_KEY = IS_PRODUCTION
   ? process.env.SNAP_MERCHANT_KEY_PROD
   : process.env.SNAP_MERCHANT_KEY_DEV;
 
+const PRIVATE_KEY_PATH = IS_PRODUCTION
+  ? path.resolve(__dirname, "private_key_prod.pem")
+  : path.resolve(__dirname, "private_key_dev.pem")
+
 // CHECKOUTPAGE CONFIG
 const CHECKOUT_BASE_URL = IS_PRODUCTION
   ? process.env.CHECKOUT_BASE_URL_PROD
@@ -45,7 +49,7 @@ const CONFIG = {
   CHECKOUT_SECRET_KEY,
 
   // key paths
-  PRIVATE_KEY_PATH: path.resolve(__dirname, "private_key.pem"),
+  PRIVATE_KEY_PATH,
   PUBLIC_KEY_PATH: path.resolve(__dirname, "public_key.pem"),
 };
 

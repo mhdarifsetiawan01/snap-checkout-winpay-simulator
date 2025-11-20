@@ -19,6 +19,9 @@ touch .env
 ## SNAP
 ```bash
 node simulator.js snap [create, inquiry, status, ...]
+
+# or you can add node_env (development/production)
+NODE_ENV=development node simulator.js snap [create, inquiry, status, ...]
 ```
 - ### example:
     ```bash
@@ -35,6 +38,9 @@ node simulator.js snap [create, inquiry, status, ...]
 ## Chekout Page
 ```bash
 node simulator.js checkoutpage [create, find, ...]
+
+# or you can add node_env (development/production)
+NODE_ENV=development node simulator.js checkoutpage [create, find, ...]
 ```
 - ### example:
     ```bash

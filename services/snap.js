@@ -27,14 +27,14 @@ async function sendRequest(endpoint, payload, simulate = true) {
     "CHANNEL-ID": 'WEB'
   };
 
-  if (simulate) {
+  if (!simulate) {
     logger.info("=== SIMULATED REQUEST ===");
     logger.debug("URL:", url);
     logger.debug("Headers:", headers);
     logger.debug("Body:", JSON.stringify(payload, null, 2));
     logger.debug("StringToSign:", stringToSign);
     logger.debug("Signature:", signature);
-    return null;
+    // return null;
   }
 
   // eksekusi request real
@@ -69,7 +69,8 @@ async function sendRequest(endpoint, payload, simulate = true) {
 /**
  * Create VA
  */
-async function create(payload = {}, simulate = true) {
+async function createva(payload = {}, simulate = true) {
+  console.log(payload.additionalInfo.channel, "hahhah")
   if (!payload.expiredDate) payload.expiredDate = generateTimestamp(5);
   // return await sendRequest("/v1.0/transfer-va/create-va", payload, simulate);
 
@@ -88,8 +89,13 @@ async function create(payload = {}, simulate = true) {
       logger.info(`💾 trxid saved: ${vaData.trxId}`);
     }
     if (vaData.virtualAccountNo) {
-      await saveKey("lastVirtualAccountNo", vaData.virtualAccountNo);
-      logger.info(`💾 VA Number saved: ${vaData.virtualAccountNo}`);
+      if (payload.additionalInfo.channel == "INDOMARET") {
+        await saveKey("lastVirtualAccountNo", vaData.customerNo);
+        logger.info(`💾 customerNo saved: ${vaData.customerNo}`);
+      } else {
+        await saveKey("lastVirtualAccountNo", vaData.virtualAccountNo);
+        logger.info(`💾 VA Number saved: ${vaData.virtualAccountNo}`);
+      }
     }
     if (vaData.additionalInfo.channel) {
       await saveKey("lastChannel", vaData.additionalInfo.channel);
@@ -103,15 +109,27 @@ async function create(payload = {}, simulate = true) {
 /**
  * Inquiry VA
  */
-async function inquiry(payload = {}, simulate = true) {
+async function inquiryva(payload = {}, simulate = true) {
   return await sendRequest("/v1.0/transfer-va/inquiry-va", payload, simulate);
 }
 
 /**
  * Payment Status
  */
-async function status(payload = {}, simulate = true) {
+async function statusva(payload = {}, simulate = true) {
   return await sendRequest("/v1.0/transfer-va/status", payload, simulate);
 }
 
-module.exports = { create, inquiry, status };
+async function createqris(payload = {}, simulate = true) {
+  // kirim request ke API
+  const result = await sendRequest("/v1.0/qr/qr-mpm-generate", payload, simulate);
+
+  // simpan beberapa key penting dari response ke db.json
+  if (result) {
+      logger.info(result);
+  }
+
+  return result;
+}
+
+module.exports = { createva, inquiryva, statusva, createqris };
