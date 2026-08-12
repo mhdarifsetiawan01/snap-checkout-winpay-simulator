@@ -20,6 +20,11 @@ const PRIVATE_KEY_PATH = IS_PRODUCTION
   ? path.resolve(__dirname, "private_key_prod.pem")
   : path.resolve(__dirname, "private_key_dev.pem")
 
+// Public key dari Winpay untuk verifikasi signature callback
+const WINPAY_PUBLIC_KEY_PATH = IS_PRODUCTION
+  ? path.resolve(__dirname, "winpay_public_key_prod.pem")
+  : path.resolve(__dirname, "winpay_public_key_dev.pem")
+
 // CHECKOUTPAGE CONFIG
 const CHECKOUT_BASE_URL = IS_PRODUCTION
   ? process.env.CHECKOUT_BASE_URL_PROD
@@ -43,14 +48,17 @@ const CONFIG = {
   SNAP_BASE_URL,
   SNAP_MERCHANT_KEY,
 
+  // Key paths
+  PRIVATE_KEY_PATH,
+  WINPAY_PUBLIC_KEY_PATH,
+
   // CHECKOUTPAGE
   CHECKOUT_BASE_URL,
   CHECKOUT_CLIENT_KEY,
   CHECKOUT_SECRET_KEY,
 
-  // key paths
-  PRIVATE_KEY_PATH,
-  PUBLIC_KEY_PATH: path.resolve(__dirname, "public_key.pem"),
+  // Public key DEV (disetor ke Winpay)
+  PUBLIC_KEY_PATH: path.resolve(__dirname, "public_key_dev.pem"),
 };
 
 module.exports = CONFIG;

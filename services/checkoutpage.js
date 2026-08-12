@@ -17,17 +17,16 @@ async function sendRequest(endpoint, payload, simulate = true) {
     "X-Winpay-Key": CONFIG.CHECKOUT_CLIENT_KEY,
   };
   
-  if (simulate) {
-    logger.info("=== SIMULATED CHECKOUTPAGE REQUEST ===");
+  if (!simulate) {
+    logger.info("=== CHECKOUTPAGE REQUEST ===");
     logger.debug("URL:", url);
     logger.debug("Headers:", headers);
     logger.debug("Body:", JSON.stringify(payload, null, 2));
-    return null;
   }
   
   try {
     logger.info(`📡 Sending request to: ${url}`);
-    const response = await axios.post(url, payload, { headers });
+    const response = await axios.post(url, payload, { headers, timeout: 10000 });
 
     const data = response.data;
     logger.success("✅ Response Success:");
@@ -79,7 +78,7 @@ async function findinvoice(invoiceId, simulate = true) {
 
   try {
     logger.info(`📡 Sending GET request to: ${url}`);
-    const response = await axios.get(url, { headers });
+    const response = await axios.get(url, { headers, timeout: 10000 });
 
     logger.success("✅ Response Success:");
     logger.debug(JSON.stringify(response.data, null, 2));

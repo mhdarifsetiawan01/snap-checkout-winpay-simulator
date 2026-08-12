@@ -40,7 +40,7 @@ async function sendRequest(endpoint, payload, simulate = true) {
   // eksekusi request real
   try {
     logger.info(`📡 Sending request to: ${url}`);
-    const response = await axios.post(url, payload, { headers });
+    const response = await axios.post(url, payload, { headers, timeout: 10000 });
 
     // log sukses
     logger.success("✅ Response Success:");

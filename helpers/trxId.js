@@ -5,4 +5,10 @@ function generateTrxId(prefix = "INV") {
     return `${prefix}-${timestamp}`;
   }
 
-module.exports = { generateTrxId };
+  function generateCustomerNo(prefix = "0896") {
+    // const timestamp = Date.now(); // waktu sekarang (ms)
+    const random = Math.floor(1000 + Math.random() * 99990000); // 8 digit random
+    return `${prefix}${random}`;
+  }
+
+module.exports = { generateTrxId, generateCustomerNo };
