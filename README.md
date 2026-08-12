@@ -206,7 +206,23 @@ snap-checkout-simulator/
 - Default jika tidak diisi argumen: **`development`**
 - `sandbox` dan `production` **wajib ditulis eksplisit** saat menjalankan script
 
-### 2. Alur Signature SNAP
+### 2. Akses Jaringan untuk Environment `development`
+
+Environment `development` menggunakan server internal BMS (`sandbox-api.bmstaging.id`) yang **tidak dapat diakses dari semua jaringan**.
+
+> ⚠️ **Jika menggunakan WiFi `it-sbf`**, server `sandbox-api.bmstaging.id` tidak bisa di-reach secara langsung.  
+> Solusi: tambahkan entry di `/etc/hosts` atau gunakan jaringan lain (hotspot, LAN non-it-sbf).
+
+```bash
+# Contoh tambah /etc/hosts (tanya atasan untuk IP yang benar):
+sudo nano /etc/hosts
+# tambahkan: <IP_SERVER>  sandbox-api.bmstaging.id
+```
+
+Alternatif: gunakan `sandbox` (Winpay sandbox) sebagai pengganti sementara saat di jaringan `it-sbf`.
+
+
+### 3. Alur Signature SNAP
 
 ```
 Merchant generate RSA Keypair
@@ -219,7 +235,7 @@ Winpay verifikasi signature request menggunakan public key yang terdaftar
 
 > ⚠️ Jika Anda regenerate keypair, **wajib update public key di dashboard Winpay** juga. Ketidakcocokan keypair adalah penyebab utama error `Invalid signature {cannot verify signature}`.
 
-### 3. Verifikasi Callback dari Winpay
+### 4. Verifikasi Callback dari Winpay
 
 Winpay mengirim signature di setiap notifikasi callback. Untuk memverifikasi bahwa callback benar-benar dari Winpay:
 - Gunakan `winpay_public_key_dev.pem` (DEV/Sandbox)
@@ -227,7 +243,7 @@ Winpay mengirim signature di setiap notifikasi callback. Untuk memverifikasi bah
 
 File ini didapat dari tim Winpay atau dashboard Winpay.
 
-### 4. Perilaku Database Lokal (`db.json`)
+### 5. Perilaku Database Lokal (`db.json`)
 
 - Setiap `createva` atau `createinvoice` sukses → ID transaksi & nomor VA tersimpan otomatis ke `db.json`
 - Command `inquiryva`, `statusva`, dan `findinvoice` otomatis membaca dari `db.json` tanpa perlu mengetik ulang ID
