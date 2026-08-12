@@ -5,6 +5,12 @@
 # ==========================================================
 # Format:
 #   find-invoice.sh [ENVIRONMENT]
+#
+# Environment:
+#   (kosong)    → development (default)
+#   sandbox     → Winpay Sandbox
+#   production  → Winpay Production
+#   prod        → alias production
 
 # Resolusi path sebenarnya (bahkan jika dipanggil via Symlink dari PATH)
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -13,9 +19,11 @@ cd "$SCRIPT_DIR" || exit 1
 
 RAW_ENV=${1:-"development"}
 
-# Normalisasi Environment (default: development)
+# Normalisasi Environment
 if [[ "$RAW_ENV" == "production" || "$RAW_ENV" == "prod" ]]; then
   ENV="production"
+elif [[ "$RAW_ENV" == "sandbox" ]]; then
+  ENV="sandbox"
 else
   ENV="development"
 fi

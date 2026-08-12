@@ -5,6 +5,12 @@
 # ==========================================================
 # Format:
 #   create-invoice.sh [PRICE] [PRODUCT_NAME] [ENVIRONMENT]
+#
+# Environment:
+#   (kosong)    → development (default)
+#   sandbox     → Winpay Sandbox
+#   production  → Winpay Production
+#   prod        → alias production
 
 # Resolusi path sebenarnya (bahkan jika dipanggil via Symlink dari PATH)
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -15,9 +21,11 @@ PRICE=${1:-"100000"}
 PRODUCT_NAME=${2:-"Produk A"}
 RAW_ENV=${3:-"development"}
 
-# Normalisasi Environment (default: development)
+# Normalisasi Environment
 if [[ "$RAW_ENV" == "production" || "$RAW_ENV" == "prod" ]]; then
   ENV="production"
+elif [[ "$RAW_ENV" == "sandbox" ]]; then
+  ENV="sandbox"
 else
   ENV="development"
 fi

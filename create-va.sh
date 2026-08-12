@@ -6,9 +6,11 @@
 # Format:
 #   create-va.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
 #
-# Aturan Environment:
-#   - Tanpa [ENVIRONMENT] : Default -> development
-#   - Production          : Wajib menyertakan "production" (atau "prod")
+# Environment:
+#   (kosong)    → development (default, sandbox-api.bmstaging.id)
+#   sandbox     → Winpay Sandbox (sandbox-snap.winpay.id)
+#   production  → Winpay Production (snap.winpay.id)
+#   prod        → alias production
 
 # Resolusi path sebenarnya (bahkan jika dipanggil via Symlink dari PATH)
 SCRIPT_PATH="$(readlink -f "${BASH_SOURCE[0]}")"
@@ -19,9 +21,11 @@ CHANNEL=${1:-"PERMATA"}
 AMOUNT=${2:-"15000.00"}
 RAW_ENV=${3:-"development"}
 
-# Normalisasi Environment (default: development)
+# Normalisasi Environment
 if [[ "$RAW_ENV" == "production" || "$RAW_ENV" == "prod" ]]; then
   ENV="production"
+elif [[ "$RAW_ENV" == "sandbox" ]]; then
+  ENV="sandbox"
 else
   ENV="development"
 fi
