@@ -113,7 +113,39 @@ create-va.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
 | `./create-va.sh BRI 50000 sandbox` | BRI \| Rp 50.000 \| Winpay sandbox |
 | `./create-va.sh BRI 50000 prod` | BRI \| Rp 50.000 \| production |
 
-#### B. Create Invoice (Checkout Page)
+#### B. Generate QRIS (SNAP)
+```bash
+create-qris.sh [AMOUNT] [ENVIRONMENT]
+```
+
+| Contoh | Keterangan |
+|---|---|
+| `./create-qris.sh` | Default: Rp 25.000 \| development |
+| `./create-qris.sh 50000` | Rp 50.000 \| development |
+| `./create-qris.sh 50000 sandbox` | Rp 50.000 \| Winpay sandbox |
+| `./create-qris.sh 50000 prod` | Rp 50.000 \| production |
+
+#### C. Create eWallet (SNAP)
+```bash
+create-ewallet.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
+```
+
+| Channel Code | Institusi |
+|---|---|
+| `SPAY` | ShopeePay (default) |
+| `DANA` | DANA |
+| `OVO` | OVO |
+| `SC` | Speedcash |
+| `ASTRA` | AstraPay |
+
+| Contoh | Keterangan |
+|---|---|
+| `./create-ewallet.sh` | Default: SPAY \| Rp 10.000 \| development |
+| `./create-ewallet.sh DANA 25000` | DANA \| Rp 25.000 \| development |
+| `./create-ewallet.sh OVO 50000 sandbox` | OVO \| Rp 50.000 \| Winpay sandbox |
+| `./create-ewallet.sh SPAY 10000 prod` | ShopeePay \| Rp 10.000 \| production |
+
+#### D. Create Invoice (Checkout Page)
 ```bash
 create-invoice.sh [PRICE] [PRODUCT_NAME] [ENVIRONMENT]
 ```
@@ -125,7 +157,7 @@ create-invoice.sh [PRICE] [PRODUCT_NAME] [ENVIRONMENT]
 | `./create-invoice.sh 150000 "Buku Dev" sandbox` | Rp 150.000 \| Winpay sandbox |
 | `./create-invoice.sh 150000 "Buku Dev" prod` | Rp 150.000 \| production |
 
-#### C. Find / Check Invoice (Checkout Page)
+#### E. Find / Check Invoice (Checkout Page)
 ```bash
 find-invoice.sh [ENVIRONMENT]
 ```

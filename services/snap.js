@@ -126,10 +126,44 @@ async function createqris(payload = {}, simulate = true) {
 
   // simpan beberapa key penting dari response ke db.json
   if (result) {
-      logger.info(result);
+    logger.info(result);
   }
 
   return result;
 }
 
-module.exports = { createva, inquiryva, statusva, createqris };
+async function createewallet(payload = {}, simulate = false) {
+  // kirim request ke API
+  const result = await sendRequest("/v1.0/debit/payment-host-to-host", payload, simulate);
+
+  // simpan beberapa key penting dari response ke db.json
+  if (result) {
+    if (result.additionalInfo?.contractId) {
+      await saveKey("lastContractId", result.additionalInfo.contractId);
+      logger.info(`💾 contractId saved: ${result.additionalInfo.contractId}`);
+    }
+    if (result.partnerReferenceNo) {
+      await saveKey("lastPartnerReferenceNo", result.partnerReferenceNo);
+      await saveKey("lastTrxId", result.partnerReferenceNo);
+      logger.info(`💾 partnerReferenceNo saved: ${result.partnerReferenceNo}`);
+    }
+    if (result.additionalInfo?.channel) {
+      await saveKey("lastChannel", result.additionalInfo.channel);
+      logger.info(`💾 Channel saved: ${result.additionalInfo.channel}`);
+    }
+    if (result.webRedirectUrl) {
+      await saveKey("lastWebRedirectUrl", result.webRedirectUrl);
+      logger.info(`🌐 Web Redirect URL: ${result.webRedirectUrl}`);
+    }
+    if (result.appRedirectUrl) {
+      await saveKey("lastAppRedirectUrl", result.appRedirectUrl);
+      logger.info(`📱 App Redirect URL: ${result.appRedirectUrl}`);
+    }
+  }
+
+  return result;
+}
+
+module.exports = { createva, inquiryva, statusva, createqris, createewallet };
+
+
