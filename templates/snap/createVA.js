@@ -45,7 +45,7 @@ function createQRISBody() {
     // terminalId: "TERM GIGIH", // jika terminal ada yang lain
     // subMerchantId: "17000", // jika ingin generate qris untuk submerchant
     amount: {
-      value: "50000.00",
+      value: process.env.AMOUNT || "50000.00",
       currency: "IDR"
     },
     validityPeriod: generateTimestamp(5),
