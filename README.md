@@ -245,8 +245,6 @@ ln -sf $(pwd)/find-invoice.sh ~/.local/bin/find-invoice.sh
   ./create-invoice.sh 500000 "Tiket Event" prod
   ```
 
----
-
 #### E. Find / Check Status Invoice (Checkout Page)
 Mengecek status invoice terakhir yang tersimpan di `db.json`:
 ```bash
@@ -266,9 +264,37 @@ Mengecek status invoice terakhir yang tersimpan di `db.json`:
 
 ---
 
-### 2. Menggunakan Node.js Direct Runner (`simulator.js`)
+#### F. Menjalankan Callback / Webhook Receiver Server
+Untuk menerima dan memvalidasi notifikasi pembayaran callback dari Winpay:
+```bash
+./start-callback.sh [PORT] [ENVIRONMENT]
+```
+* **Contoh Eksekusi:**
+  ```bash
+  # Menjalankan di Port 3000 (Default)
+  ./start-callback.sh
 
-Anda juga dapat menjalankan command simulator secara manual menggunakan Node.js CLI:
+  # Menjalankan di Port 8080 pada Winpay Sandbox
+  ./start-callback.sh 8080 sandbox
+  ```
+
+* **URL Endpoint Callback yang Tersedia:**
+  - `POST http://localhost:3000/callback/snap` : Receiver callback SNAP (VA, QRIS, eWallet)
+  - `POST http://localhost:3000/callback/checkout` : Receiver callback Checkout Page Invoice
+  - `GET http://localhost:3000/health` : Cek status server & callback terakhir
+
+* **Uji Publikasi Webhook (Local to Public via ngrok / cloudflared):**
+  ```bash
+  # Menggunakan ngrok
+  ngrok http 3000
+  # Setel URL Callback di dashboard Winpay ke: https://<your-id>.ngrok-free.app/callback/snap
+  ```
+
+---
+
+### 2. Menggunakan Node.js Direct Runner (`simulator.js` & `server.js`)
+
+Anda juga dapat menjalankan command simulator atau callback server secara manual menggunakan Node.js CLI:
 
 ```bash
 # === SNAP API ===
@@ -281,6 +307,9 @@ NODE_ENV=development node simulator.js snap createewallet
 # === Checkout Page API ===
 NODE_ENV=development node simulator.js checkoutpage createinvoice
 NODE_ENV=development node simulator.js checkoutpage findinvoice
+
+# === Menjalankan Callback Receiver Server ===
+PORT=3000 NODE_ENV=development node server.js
 
 # Ganti environment dengan NODE_ENV=sandbox atau NODE_ENV=production:
 NODE_ENV=sandbox node simulator.js snap createva
@@ -302,6 +331,7 @@ snap-checkout-simulator/
 │   ├── winpay_public_key_dev.pem   # [Ignored] Public Key Winpay DEV/Sandbox
 │   └── winpay_public_key_prod.pem  # [Ignored] Public Key Winpay Production
 ├── helpers/
+│   ├── callback-verifier.js        # Verifikator X-SIGNATURE callback masuk (RSA/HMAC)
 │   ├── externalId.js               # Generator X-EXTERNAL-ID unik
 │   ├── logger.js                   # Logger konsol berwarna dengan timestamp
 │   ├── signature.js                # Generator X-SIGNATURE SNAP (RSA-SHA256)
@@ -327,6 +357,8 @@ snap-checkout-simulator/
 ├── create-ewallet.sh               # CLI Shortcut: Create eWallet SNAP
 ├── create-invoice.sh               # CLI Shortcut: Create Invoice Checkout Page
 ├── find-invoice.sh                 # CLI Shortcut: Find Invoice Checkout Page
+├── start-callback.sh               # CLI Shortcut: Jalankan Callback Server Receiver
+├── server.js                       # HTTP Server Webhook Callback Receiver
 ├── .env                            # [Ignored] Konfigurasi environment lokal
 ├── sample.env                      # Template referensi file .env
 ├── db.json                         # [Ignored] Penyimpanan lokal state transaksi terakhir
