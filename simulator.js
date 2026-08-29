@@ -15,7 +15,7 @@ const TEMPLATES = {
     inquiryva: require("./templates/snap/inquiryVA").inquiryVABody,
     statusva: require("./templates/snap/paymentStatus").paymentStatusBody,
     // QRIS
-    createqris: require("./templates/snap/createVA").createQRISBody,
+    createqris: require("./templates/snap/createQRIS").createQRISBody,
     // E-Wallet
     createewallet: require("./templates/snap/createEwallet").createEwalletBody,
   },

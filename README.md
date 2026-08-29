@@ -218,9 +218,13 @@ snap-checkout-simulator/
 │   │   └── findInvoice.js
 │   └── snap/                       # Body payload template SNAP API
 │       ├── createVA.js
+│       ├── createQRIS.js
+│       ├── createEwallet.js
 │       ├── inquiryVA.js
 │       └── paymentStatus.js
 ├── create-va.sh                    # Shortcut CLI: Create VA
+├── create-qris.sh                  # Shortcut CLI: Generate QRIS
+├── create-ewallet.sh               # Shortcut CLI: Create eWallet
 ├── create-invoice.sh               # Shortcut CLI: Create Invoice
 ├── find-invoice.sh                 # Shortcut CLI: Find Invoice
 ├── db.json                         # State lokal: ID transaksi terakhir

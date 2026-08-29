@@ -39,34 +39,5 @@ function createVABody() {
 //   };
 // }
 
-function createQRISBody() {
-  return {
-    partnerReferenceNo: generateTrxId("ref"),
-    // terminalId: "TERM GIGIH", // jika terminal ada yang lain
-    // subMerchantId: "17000", // jika ingin generate qris untuk submerchant
-    amount: {
-      value: process.env.AMOUNT || "50000.00",
-      currency: "IDR"
-    },
-    validityPeriod: generateTimestamp(5),
-    additionalInfo: {
-      isStatic: false
-    }
-  };
-}
-// function createQRISBody() {
-//   return {
-//     partnerReferenceNo: "QRIS-02200313-1764222024123",
-//     // terminalId: "AUFANET",
-//     amount: {
-//       value: "166500",
-//       currency: "IDR"
-//     },
-//     validityPeriod: "2025-12-31T12:40:24+07:00",
-//     additionalInfo: {
-//       isStatic: false
-//     }
-//   };
-// }
+module.exports = { createVABody };
 
-module.exports = { createVABody, createQRISBody };
