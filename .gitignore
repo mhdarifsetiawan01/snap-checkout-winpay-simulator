@@ -1,5 +1,36 @@
+# Dependencies
 node_modules/
+
+# Environment files & Secrets
 .env
-.env.production
+.env.*
+.env*.local
+!.env.example
+!sample.env
+
+# RSA Keys, Private Keys & Certificates
+*.pem
+*.key
+*.crt
+*.csr
+*.p12
+*.pfx
+
+# Local Database & State
 db.json
-*key*.pem
+*.sqlite
+*.sqlite3
+
+# Logs & Debug
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# System & Editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo

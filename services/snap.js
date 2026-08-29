@@ -70,9 +70,7 @@ async function sendRequest(endpoint, payload, simulate = true) {
  * Create VA
  */
 async function createva(payload = {}, simulate = true) {
-  console.log(payload.additionalInfo.channel, "hahhah")
   if (!payload.expiredDate) payload.expiredDate = generateTimestamp(5);
-  // return await sendRequest("/v1.0/transfer-va/create-va", payload, simulate);
 
   // kirim request ke API
   const result = await sendRequest("/v1.0/transfer-va/create-va", payload, simulate);
