@@ -1,191 +1,290 @@
 # 🚀 Winpay SNAP & Checkout Page API Simulator
 
-Alat simulator berbasis Node.js CLI untuk mendokumentasikan, menguji, dan mensimulasikan integrasi API **SNAP BI (Virtual Account & QRIS)** serta **Checkout Page (Invoice)** pada Payment Gateway Winpay.
+Alat simulator berbasis Node.js CLI untuk mendokumentasikan, menguji, dan mensimulasikan integrasi API **SNAP BI (Virtual Account, QRIS, & eWallet)** serta **Checkout Page (Invoice)** pada Payment Gateway Winpay.
 
 ---
 
 ## 📌 Fitur Utama
 
-- 🔐 **Hitung Otomatis Signature & Header**: Menghasilkan `X-SIGNATURE`, `X-TIMESTAMP`, dan `X-EXTERNAL-ID` secara otomatis sesuai standar SNAP & Checkout Page.
-- 💾 **Auto-Save ID Transaksi (`db.json`)**: Menyimpan ID transaksi terakhir secara otomatis (seperti `lastContractId`, `lastTrxId`, `lastVirtualAccountNo`, `lastInvoiceId`) untuk mempermudah eksekusi request lanjutan (*Inquiry* / *Status*).
-- 🛠️ **Bash Helper Script**: Menyediakan shortcut `.sh` yang dapat dijalankan langsung dari terminal (`create-va.sh`, `create-invoice.sh`, `find-invoice.sh`).
-- ⚡ **3 Environment Support**: Mendukung `development`, `sandbox`, dan `production` secara dinamis tanpa mengubah kode.
+- 🔐 **Hitung Otomatis Signature & Header**: Menghasilkan `X-SIGNATURE` (RSA-SHA256), `X-TIMESTAMP`, dan `X-EXTERNAL-ID` secara otomatis sesuai standar SNAP BI & Checkout Page.
+- 💾 **Auto-Save ID Transaksi (`db.json`)**: Menyimpan ID transaksi terakhir secara otomatis (seperti `lastContractId`, `lastTrxId`, `lastVirtualAccountNo`, `lastInvoiceId`, `lastWebRedirectUrl`) untuk mempermudah eksekusi request lanjutan (*Inquiry* / *Status*).
+- 🛠️ **Bash Helper Script**: Menyediakan shortcut CLI `.sh` yang dapat dipanggil langsung dari mana saja di terminal (`create-va.sh`, `create-qris.sh`, `create-ewallet.sh`, `create-invoice.sh`, `find-invoice.sh`).
+- ⚡ **3 Multi-Environment Support**: Mendukung `development`, `sandbox`, dan `production` secara dinamis tanpa mengubah kode.
 
 ---
 
 ## 🌐 Environment
 
-| Environment | SNAP URL | Checkout URL | Keterangan |
+| Environment | SNAP Base URL | Checkout Page Base URL | Keterangan |
 |---|---|---|---|
-| `development` | `sandbox-api.bmstaging.id/snap` | `checkout.bmstaging.id` | Internal BMS staging |
-| `sandbox` | `sandbox-snap.winpay.id` | `sandbox-checkout.winpay.id` | Winpay Sandbox |
-| `production` | `snap.winpay.id` | `checkout.winpay.id` | Winpay Production |
+| `development` | `https://sandbox-api.bmstaging.id/snap` | `https://checkout.bmstaging.id` | Server internal staging |
+| `sandbox` | `https://sandbox-snap.winpay.id` | `https://sandbox-checkout.winpay.id` | Official Winpay Sandbox |
+| `production` | `https://snap.winpay.id` | `https://checkout.winpay.id` | Official Winpay Production |
 
-> **Default jika tidak diisi: `development`**
+> 💡 **Default jika argumen environment tidak diisi: `development`**
+
+---
+
+## 🔒 Daftar File yang Di-Ignore Git (Wajib Disiapkan Manual)
+
+Untuk menjaga keamanan kredensial dan mencegah kebocoran private key ke GitHub, file-file berikut sengaja dimasukkan ke dalam `.gitignore`. **Setelah melakukan `git clone`, Anda wajib menyiapkan file-file berikut secara manual:**
+
+| File / Direktori | Status | Deskripsi & Cara Menyiapkannya |
+|---|---|---|
+| **`.env`** | *Ignored* | Menyimpan secret key, merchant key, dan client key. Dibuat dengan menyalin `sample.env`. |
+| **`config/private_key_dev.pem`** | *Ignored* | RSA Private Key merchant untuk signing request SNAP (Dev & Sandbox). Dihasilkan via OpenSSL. |
+| **`config/public_key_dev.pem`** | *Ignored* | RSA Public Key pasangan `private_key_dev.pem`. Disetor ke dashboard Winpay. |
+| **`config/private_key_prod.pem`** | *Ignored* | RSA Private Key merchant untuk environment Production (jika menggunakan production). |
+| **`config/winpay_public_key_dev.pem`** | *Ignored* | Public Key resmi dari Winpay untuk validasi callback di Sandbox/Dev (opsional). |
+| **`config/winpay_public_key_prod.pem`** | *Ignored* | Public Key resmi dari Winpay untuk validasi callback di Production (opsional). |
+| **`db.json`** | *Ignored* | Database JSON lokal yang dibuat otomatis saat script pertama kali berhasil mengeksekusi request. |
+| **`node_modules/`** | *Ignored* | Folder dependensi library Node.js. Dibuat otomatis saat menjalankan `npm install`. |
 
 ---
 
 ## 💻 Prasyarat Sistem
 
-* **Node.js**: `>= 18.20.3`
-* **npm**: `>= 9.0.0`
+* **Node.js**: `>= 18.x`
+* **npm**: `>= 9.x`
+* **OpenSSL**: untuk generate RSA keypair (bawaan Linux/macOS/Git Bash)
 
 ---
 
-## ⚙️ Cara Instalasi & Konfigurasi
+## ⚙️ Panduan Setup Langkah Demi Langkah
 
-### 1. Install Dependensi
+### 1. Clone Repository & Install Dependensi
 
 ```bash
+git clone <URL_REPOSITORY_ANDA>
+cd snap-checkout-simulator
 npm install
 ```
 
+---
+
 ### 2. Setup File Environment (`.env`)
 
-Salin file `sample.env` menjadi `.env`:
+Salin template `sample.env` menjadi file `.env`:
+
 ```bash
 cp sample.env .env
 ```
 
-### 3. Isi Konfigurasi `.env`
+Buka dan isi file `.env` dengan kredensial akun Winpay Anda:
 
 ```env
+# Mode Debug Console
 DEBUG=true
 NODE_ENV=development
+PORT=3000
 
-# SNAP API
+# =============================================================
+# SNAP API CONFIG
+# =============================================================
 SNAP_BASE_URL_DEV=https://sandbox-api.bmstaging.id/snap
 SNAP_BASE_URL_SANDBOX=https://sandbox-snap.winpay.id
 SNAP_BASE_URL_PROD=https://snap.winpay.id
-SNAP_MERCHANT_KEY_DEV=your-merchant-key-dev
+
+# Merchant Key (X-PARTNER-ID)
+SNAP_MERCHANT_KEY_DEV=your-merchant-key-dev-or-sandbox
 SNAP_MERCHANT_KEY_PROD=your-merchant-key-prod
 
-# Checkout Page API
+# =============================================================
+# CHECKOUT PAGE API CONFIG
+# =============================================================
 CHECKOUT_BASE_URL_DEV=https://checkout.bmstaging.id
 CHECKOUT_BASE_URL_SANDBOX=https://sandbox-checkout.winpay.id
 CHECKOUT_BASE_URL_PROD=https://checkout.winpay.id
+
 CHECKOUT_CLIENT_KEY_DEV=your-client-key-dev
 CHECKOUT_SECRET_KEY_DEV=your-secret-key-dev
+
 CHECKOUT_CLIENT_KEY_SANDBOX=your-client-key-sandbox
 CHECKOUT_SECRET_KEY_SANDBOX=your-secret-key-sandbox
+
 CHECKOUT_CLIENT_KEY_PROD=your-client-key-prod
 CHECKOUT_SECRET_KEY_PROD=your-secret-key-prod
 ```
 
-### 4. Setup RSA Key Pair
+---
 
-Project ini menggunakan RSA keypair yang **Anda generate sendiri**. Terdapat 3 jenis file key:
+### 3. Generate RSA Key Pair untuk SNAP API
 
-| File | Fungsi | Dari mana |
-|---|---|---|
-| `config/private_key_dev.pem` | Signing request SNAP (DEV & Sandbox) | Generate sendiri |
-| `config/private_key_prod.pem` | Signing request SNAP (Production) | Generate sendiri |
-| `config/public_key_dev.pem` | Pasangan dari `private_key_dev.pem` | Derive dari private key |
-| `config/winpay_public_key_dev.pem` | Verifikasi signature callback masuk (DEV/Sandbox) | Dari Winpay |
-| `config/winpay_public_key_prod.pem` | Verifikasi signature callback masuk (Production) | Dari Winpay |
+SNAP BI mewajibkan setiap request ditandatangani (*sign*) dengan RSA-SHA256 Private Key, dan Winpay akan memverifikasinya menggunakan Public Key Anda yang terdaftar di sistem mereka.
 
-**Generate keypair baru:**
+Jalankan perintah OpenSSL berikut dari root project:
+
 ```bash
-# Generate private key DEV
-openssl genrsa -out config/private_key_dev.pem 1024
+# 1. Generate Private Key DEV/Sandbox
+openssl genrsa -out config/private_key_dev.pem 2048
 
-# Derive public key dari private key
+# 2. Derive Public Key dari Private Key
 openssl rsa -in config/private_key_dev.pem -pubout -out config/public_key_dev.pem
 ```
 
-**Setor `public_key_dev.pem` ke dashboard Winpay** (menu Public Key / Partner Key). Winpay akan menggunakannya untuk memverifikasi setiap request yang Anda kirim.
+> ⚠️ **Penting**: Salin seluruh isi teks file `config/public_key_dev.pem` lalu simpan/setor ke **Dashboard Winpay (Menu Merchant Info / SNAP Key)**.
+
+Jika Anda ingin menggunakan environment Production:
+```bash
+openssl genrsa -out config/private_key_prod.pem 2048
+openssl rsa -in config/private_key_prod.pem -pubout -out config/public_key_prod.pem
+```
+
+---
+
+### 4. Berikan Izin Eksekusi pada Script Bash
+
+Pastikan semua file script `.sh` memiliki izin executable:
+
+```bash
+chmod +x *.sh
+```
+
+*(Opsional)* Agar perintah `.sh` dapat dipanggil dari folder mana pun di terminal tanpa harus masuk ke folder project ini, buat symlink ke direktori `$PATH` Anda (misal `~/.local/bin` atau `~/scrypt`):
+
+```bash
+ln -sf $(pwd)/create-va.sh ~/.local/bin/create-va.sh
+ln -sf $(pwd)/create-qris.sh ~/.local/bin/create-qris.sh
+ln -sf $(pwd)/create-ewallet.sh ~/.local/bin/create-ewallet.sh
+ln -sf $(pwd)/create-invoice.sh ~/.local/bin/create-invoice.sh
+ln -sf $(pwd)/find-invoice.sh ~/.local/bin/find-invoice.sh
+```
 
 ---
 
 ## 🚀 Cara Penggunaan
 
-### 1. Menggunakan Script Shell (Rekomendasi)
+### 1. Menggunakan Script Shell CLI (Rekomendasi)
 
-#### A. Create Virtual Account (SNAP)
+#### A. Create Virtual Account (SNAP API)
 ```bash
-create-va.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
+./create-va.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
 ```
+* **Contoh Eksekusi:**
+  ```bash
+  # Default: Channel PERMATA | Rp 15.000 | Development
+  ./create-va.sh
 
-| Contoh | Keterangan |
-|---|---|
-| `./create-va.sh` | Default: PERMATA \| Rp 15.000 \| development |
-| `./create-va.sh BRI 50000` | BRI \| Rp 50.000 \| development |
-| `./create-va.sh BRI 50000 sandbox` | BRI \| Rp 50.000 \| Winpay sandbox |
-| `./create-va.sh BRI 50000 prod` | BRI \| Rp 50.000 \| production |
+  # Channel BRI | Rp 50.000 | Development
+  ./create-va.sh BRI 50000
 
-#### B. Generate QRIS (SNAP)
+  # Channel BCA | Rp 100.000 | Winpay Sandbox
+  ./create-va.sh BCA 100000 sandbox
+
+  # Channel MANDIRI | Rp 75.000 | Production
+  ./create-va.sh MANDIRI 75000 prod
+  ```
+
+---
+
+#### B. Generate QRIS (SNAP API)
 ```bash
-create-qris.sh [AMOUNT] [ENVIRONMENT]
+./create-qris.sh [AMOUNT] [ENVIRONMENT]
 ```
+* **Contoh Eksekusi:**
+  ```bash
+  # Default: Rp 25.000 | Development
+  ./create-qris.sh
 
-| Contoh | Keterangan |
-|---|---|
-| `./create-qris.sh` | Default: Rp 25.000 \| development |
-| `./create-qris.sh 50000` | Rp 50.000 \| development |
-| `./create-qris.sh 50000 sandbox` | Rp 50.000 \| Winpay sandbox |
-| `./create-qris.sh 50000 prod` | Rp 50.000 \| production |
+  # Rp 50.000 | Development
+  ./create-qris.sh 50000
 
-#### C. Create eWallet (SNAP)
+  # Rp 50.000 | Winpay Sandbox
+  ./create-qris.sh 50000 sandbox
+
+  # Rp 100.000 | Production
+  ./create-qris.sh 100000 prod
+  ```
+
+---
+
+#### C. Create eWallet Payment (SNAP API)
 ```bash
-create-ewallet.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
+./create-ewallet.sh [CHANNEL] [AMOUNT] [ENVIRONMENT]
 ```
+* **Channel yang Didukung:**
+  - `SPAY` : ShopeePay (*default*)
+  - `DANA` : DANA
+  - `OVO`  : OVO
+  - `SC`   : Speedcash
+  - `ASTRA`: AstraPay
 
-| Channel Code | Institusi |
-|---|---|
-| `SPAY` | ShopeePay (default) |
-| `DANA` | DANA |
-| `OVO` | OVO |
-| `SC` | Speedcash |
-| `ASTRA` | AstraPay |
+* **Contoh Eksekusi:**
+  ```bash
+  # Default: ShopeePay | Rp 10.000 | Development
+  ./create-ewallet.sh
 
-| Contoh | Keterangan |
-|---|---|
-| `./create-ewallet.sh` | Default: SPAY \| Rp 10.000 \| development |
-| `./create-ewallet.sh DANA 25000` | DANA \| Rp 25.000 \| development |
-| `./create-ewallet.sh OVO 50000 sandbox` | OVO \| Rp 50.000 \| Winpay sandbox |
-| `./create-ewallet.sh SPAY 10000 prod` | ShopeePay \| Rp 10.000 \| production |
+  # DANA | Rp 25.000 | Development
+  ./create-ewallet.sh DANA 25000
+
+  # OVO | Rp 50.000 | Winpay Sandbox
+  ./create-ewallet.sh OVO 50000 sandbox
+
+  # ShopeePay | Rp 10.000 | Production
+  ./create-ewallet.sh SPAY 10000 prod
+  ```
+
+---
 
 #### D. Create Invoice (Checkout Page)
 ```bash
-create-invoice.sh [PRICE] [PRODUCT_NAME] [ENVIRONMENT]
+./create-invoice.sh [PRICE] [PRODUCT_NAME] [ENVIRONMENT]
 ```
+* **Contoh Eksekusi:**
+  ```bash
+  # Default: Rp 100.000 | Produk A | Development
+  ./create-invoice.sh
 
-| Contoh | Keterangan |
-|---|---|
-| `./create-invoice.sh` | Default: Rp 100.000 \| Produk A \| development |
-| `./create-invoice.sh 150000 "Buku Dev"` | Rp 150.000 \| development |
-| `./create-invoice.sh 150000 "Buku Dev" sandbox` | Rp 150.000 \| Winpay sandbox |
-| `./create-invoice.sh 150000 "Buku Dev" prod` | Rp 150.000 \| production |
+  # Rp 150.000 | "Buku Panduan Dev" | Development
+  ./create-invoice.sh 150000 "Buku Panduan Dev"
 
-#### E. Find / Check Invoice (Checkout Page)
+  # Rp 250.000 | "Langganan Premium" | Winpay Sandbox
+  ./create-invoice.sh 250000 "Langganan Premium" sandbox
+
+  # Rp 500.000 | "Tiket Event" | Production
+  ./create-invoice.sh 500000 "Tiket Event" prod
+  ```
+
+---
+
+#### E. Find / Check Status Invoice (Checkout Page)
+Mengecek status invoice terakhir yang tersimpan di `db.json`:
 ```bash
-find-invoice.sh [ENVIRONMENT]
+./find-invoice.sh [ENVIRONMENT]
 ```
+* **Contoh Eksekusi:**
+  ```bash
+  # Cek invoice terakhir di Development
+  ./find-invoice.sh
 
-| Contoh | Keterangan |
-|---|---|
-| `./find-invoice.sh` | Cek invoice terakhir (development) |
-| `./find-invoice.sh sandbox` | Cek invoice terakhir (Winpay sandbox) |
-| `./find-invoice.sh prod` | Cek invoice terakhir (production) |
+  # Cek invoice terakhir di Sandbox
+  ./find-invoice.sh sandbox
+
+  # Cek invoice terakhir di Production
+  ./find-invoice.sh prod
+  ```
 
 ---
 
 ### 2. Menggunakan Node.js Direct Runner (`simulator.js`)
 
+Anda juga dapat menjalankan command simulator secara manual menggunakan Node.js CLI:
+
 ```bash
-# SNAP API
+# === SNAP API ===
 NODE_ENV=development node simulator.js snap createva
 NODE_ENV=development node simulator.js snap inquiryva
 NODE_ENV=development node simulator.js snap statusva
 NODE_ENV=development node simulator.js snap createqris
+NODE_ENV=development node simulator.js snap createewallet
 
-# Checkout Page API
+# === Checkout Page API ===
 NODE_ENV=development node simulator.js checkoutpage createinvoice
 NODE_ENV=development node simulator.js checkoutpage findinvoice
 
-# Ganti NODE_ENV untuk environment lain:
-NODE_ENV=sandbox     node simulator.js snap createva
-NODE_ENV=production  node simulator.js snap createva
+# Ganti environment dengan NODE_ENV=sandbox atau NODE_ENV=production:
+NODE_ENV=sandbox node simulator.js snap createva
+NODE_ENV=production node simulator.js snap createva
 ```
 
 ---
@@ -195,91 +294,58 @@ NODE_ENV=production  node simulator.js snap createva
 ```text
 snap-checkout-simulator/
 ├── config/
-│   ├── config.js                   # Pemetaan konfigurasi env & key (dev/sandbox/prod)
-│   ├── private_key_dev.pem         # RSA Private Key (DEV & Sandbox)
-│   ├── private_key_prod.pem        # RSA Private Key (Production)
-│   ├── public_key_dev.pem          # RSA Public Key DEV (disetor ke Winpay)
-│   ├── winpay_public_key_dev.pem   # Public Key dari Winpay (verifikasi callback DEV)
-│   └── winpay_public_key_prod.pem  # Public Key dari Winpay (verifikasi callback PROD)
+│   ├── config.js                   # Pemetaan konfigurasi env & path RSA keys
+│   ├── validateEnv.js              # Validator env variabel
+│   ├── private_key_dev.pem         # [Ignored] RSA Private Key (DEV & Sandbox)
+│   ├── public_key_dev.pem          # [Ignored] RSA Public Key DEV (disetor ke Winpay)
+│   ├── private_key_prod.pem        # [Ignored] RSA Private Key (Production)
+│   ├── winpay_public_key_dev.pem   # [Ignored] Public Key Winpay DEV/Sandbox
+│   └── winpay_public_key_prod.pem  # [Ignored] Public Key Winpay Production
 ├── helpers/
-│   ├── externalId.js               # Generator X-EXTERNAL-ID
-│   ├── logger.js                   # Logger konsol berwarna
-│   ├── signature-checkoutpage.js   # Signature generator Checkout Page
-│   ├── signature.js                # Signature generator SNAP (RSA-SHA256)
-│   ├── storage.js                  # Penyimpanan lokal lowdb (db.json)
-│   ├── timestamp.js                # ISO 8601 Timestamp Generator (+07:00)
-│   └── trxId.js                    # Transaction ID & Customer No Generator
+│   ├── externalId.js               # Generator X-EXTERNAL-ID unik
+│   ├── logger.js                   # Logger konsol berwarna dengan timestamp
+│   ├── signature.js                # Generator X-SIGNATURE SNAP (RSA-SHA256)
+│   ├── signature-checkoutpage.js   # Generator Signature Checkout Page (HMAC-SHA256)
+│   ├── storage.js                  # Database lokal lowdb (db.json)
+│   ├── timestamp.js                # Generator Timestamp ISO 8601 (+07:00)
+│   └── trxId.js                    # Generator nomor referensi/transaksi acak
 ├── services/
-│   ├── checkoutpage.js             # HTTP client & handler Checkout Page API
-│   └── snap.js                     # HTTP client & handler SNAP API
+│   ├── snap.js                     # HTTP Client API SNAP (VA, QRIS, eWallet)
+│   └── checkoutpage.js             # HTTP Client API Checkout Page (Invoice)
 ├── templates/
-│   ├── checkoutpage/               # Body payload template Checkout Page
-│   │   ├── createInvoice.js
-│   │   └── findInvoice.js
-│   └── snap/                       # Body payload template SNAP API
-│       ├── createVA.js
-│       ├── createQRIS.js
-│       ├── createEwallet.js
-│       ├── inquiryVA.js
-│       └── paymentStatus.js
-├── create-va.sh                    # Shortcut CLI: Create VA
-├── create-qris.sh                  # Shortcut CLI: Generate QRIS
-├── create-ewallet.sh               # Shortcut CLI: Create eWallet
-├── create-invoice.sh               # Shortcut CLI: Create Invoice
-├── find-invoice.sh                 # Shortcut CLI: Find Invoice
-├── db.json                         # State lokal: ID transaksi terakhir
+│   ├── snap/                       # Template Payload JSON SNAP API
+│   │   ├── createVA.js
+│   │   ├── createQRIS.js
+│   │   ├── createEwallet.js
+│   │   ├── inquiryVA.js
+│   │   └── paymentStatus.js
+│   └── checkoutpage/               # Template Payload JSON Checkout Page
+│       ├── createInvoice.js
+│       └── findInvoice.js
+├── create-va.sh                    # CLI Shortcut: Create VA SNAP
+├── create-qris.sh                  # CLI Shortcut: Generate QRIS SNAP
+├── create-ewallet.sh               # CLI Shortcut: Create eWallet SNAP
+├── create-invoice.sh               # CLI Shortcut: Create Invoice Checkout Page
+├── find-invoice.sh                 # CLI Shortcut: Find Invoice Checkout Page
+├── .env                            # [Ignored] Konfigurasi environment lokal
+├── sample.env                      # Template referensi file .env
+├── db.json                         # [Ignored] Penyimpanan lokal state transaksi terakhir
 ├── simulator.js                    # Entry point CLI Runner utama
-├── sample.env                      # Template file environment
-└── README.md                       # Dokumentasi teknis project
+├── package.json                    # Konfigurasi dependensi Node.js
+└── README.md                       # Dokumentasi lengkap project
 ```
 
 ---
 
-## 📝 Catatan Penting
+## 📝 Catatan Teknis & Troubleshooting
 
-### 1. Aturan Environment
+### 1. Error `Invalid signature {cannot verify signature}`
+Penyebab paling umum:
+- RSA Public key (`public_key_dev.pem`) belum disetor ke Dashboard Winpay pada merchant key yang bersangkutan.
+- Private key yang dipakai berbeda dengan pasangan public key yang didaftarkan ke Winpay.
+- Pastikan saat generate keypair menggunakan format PKCS#8 / standard OpenSSL RSA.
 
-- Default jika tidak diisi argumen: **`development`**
-- `sandbox` dan `production` **wajib ditulis eksplisit** saat menjalankan script
-
-### 2. Akses Jaringan untuk Environment `development`
-
-Environment `development` menggunakan server internal BMS (`sandbox-api.bmstaging.id`) yang **tidak dapat diakses dari semua jaringan**.
-
-> ⚠️ **Jika menggunakan WiFi `it-sbf`**, server `sandbox-api.bmstaging.id` tidak bisa di-reach secara langsung.  
-> Solusi: tambahkan entry di `/etc/hosts` atau gunakan jaringan lain (hotspot, LAN non-it-sbf).
-
-```bash
-# Contoh tambah /etc/hosts (tanya atasan untuk IP yang benar):
-sudo nano /etc/hosts
-# tambahkan: <IP_SERVER>  sandbox-api.bmstaging.id
-```
-
-Alternatif: gunakan `sandbox` (Winpay sandbox) sebagai pengganti sementara saat di jaringan `it-sbf`.
-
-
-### 3. Alur Signature SNAP
-
-```
-Merchant generate RSA Keypair
-    ↓
-private_key_*.pem  →  dipakai kode untuk signing setiap request
-public_key_dev.pem →  disetor ke dashboard Winpay
-    ↓
-Winpay verifikasi signature request menggunakan public key yang terdaftar
-```
-
-> ⚠️ Jika Anda regenerate keypair, **wajib update public key di dashboard Winpay** juga. Ketidakcocokan keypair adalah penyebab utama error `Invalid signature {cannot verify signature}`.
-
-### 4. Verifikasi Callback dari Winpay
-
-Winpay mengirim signature di setiap notifikasi callback. Untuk memverifikasi bahwa callback benar-benar dari Winpay:
-- Gunakan `winpay_public_key_dev.pem` (DEV/Sandbox)
-- Gunakan `winpay_public_key_prod.pem` (Production)
-
-File ini didapat dari tim Winpay atau dashboard Winpay.
-
-### 5. Perilaku Database Lokal (`db.json`)
-
-- Setiap `createva` atau `createinvoice` sukses → ID transaksi & nomor VA tersimpan otomatis ke `db.json`
-- Command `inquiryva`, `statusva`, dan `findinvoice` otomatis membaca dari `db.json` tanpa perlu mengetik ulang ID
+### 2. Error Jaringan `timeout of 10000ms exceeded` di Environment `development`
+Environment `development` menggunakan server internal BMS (`sandbox-api.bmstaging.id`).
+- Jika Anda terhubung via WiFi tertentu (seperti `it-sbf`), domain tersebut memerlukan entry `/etc/hosts` ke IP staging yang valid.
+- **Solusi Alternatif**: Gunakan environment `sandbox` (`sandbox-snap.winpay.id`) yang dapat diakses dari jaringan internet umum tanpa hambatan DNS lokal.
