@@ -8,9 +8,10 @@ primary_region = "sin"
 
 
 [env]
-  API_PORT = "3001"
-  NODE_ENV  = "production"
-  PORT      = "3001"
+  API_PORT    = "3001"
+  NODE_ENV    = "development"
+  DEFAULT_ENV = "development"
+  PORT        = "3001"
 
 [http_service]
   internal_port       = 3001
