@@ -1,8 +1,10 @@
 'use client';
 import { useState } from 'react';
 import ResponseViewer from '@/components/shared/ResponseViewer';
+import { useCustomCheckoutCredentials } from '@/lib/useEnv';
 
 export default function FindInvoicePanel({ env }) {
+  const [customCheckout] = useCustomCheckoutCredentials();
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
   const [isError, setIsError] = useState(false);
@@ -10,7 +12,13 @@ export default function FindInvoicePanel({ env }) {
   const handleFind = async () => {
     setLoading(true); setResult(null);
     try {
-      const r = await fetch(`/api/checkout/invoice/last${env ? `?env=${env}` : ''}`);
+      const params = new URLSearchParams();
+      if (env) params.append('env', env);
+      if (customCheckout?.clientKey) params.append('clientKey', customCheckout.clientKey);
+      if (customCheckout?.secretKey) params.append('secretKey', customCheckout.secretKey);
+      const queryStr = params.toString() ? `?${params.toString()}` : '';
+
+      const r = await fetch(`/api/checkout/invoice/last${queryStr}`);
       const data = await r.json();
       setIsError(!r.ok || !data.success);
       setResult(data);

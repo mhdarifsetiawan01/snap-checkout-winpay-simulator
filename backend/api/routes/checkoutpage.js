@@ -117,7 +117,18 @@ async function checkoutPageRoutes(fastify) {
         });
       }
 
+      const { clientKey, secretKey } = request.query || {};
+      if (clientKey && String(clientKey).trim() !== "") {
+        process.env.CHECKOUT_CLIENT_KEY_OVERRIDE = String(clientKey).trim();
+      }
+      if (secretKey && String(secretKey).trim() !== "") {
+        process.env.CHECKOUT_SECRET_KEY_OVERRIDE = String(secretKey).trim();
+      }
+
       const result = await checkoutService.findinvoice(invoiceId, false);
+
+      delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+      delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
 
       // Update status jika invoice terbayar / expired
       const responseData = result?.responseData || result?.data || {};
@@ -155,6 +166,8 @@ async function checkoutPageRoutes(fastify) {
 
       return reply.send({ success: true, invoiceId, data: result });
     } catch (err) {
+      delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+      delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
       const statusCode = err.statusCode || err.response?.status || 500;
       let errorMsg = err.message;
       let errorData = null;

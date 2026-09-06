@@ -1,5 +1,6 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
+import { useCustomPartnerId, useCustomCheckoutCredentials } from '@/lib/useEnv';
 
 const CATEGORIES = [
   { id: 'all',      label: 'Semua Transaksi', icon: '◈' },
@@ -10,6 +11,8 @@ const CATEGORIES = [
 ];
 
 export default function TransactionHistory({ defaultCategory = 'all', title = 'Daftar 10 Transaksi Terakhir' }) {
+  const [customPartnerId] = useCustomPartnerId();
+  const [customCheckout] = useCustomCheckoutCredentials();
   const [activeTab, setActiveTab] = useState(defaultCategory);
   const [transactions, setTransactions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,9 +63,12 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
     setCheckingId(tx.id);
     setFeedback(null);
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (customPartnerId) headers['X-Partner-ID'] = customPartnerId;
+
       const res = await fetch('/api/transactions/check-status', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           id: tx.id,
           type: tx.type,
@@ -71,6 +77,9 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
           virtualAccountNo: tx.virtualAccountNo,
           invoiceId: tx.invoiceId,
           env: tx.env,
+          partnerId: customPartnerId || undefined,
+          clientKey: customCheckout?.clientKey || undefined,
+          secretKey: customCheckout?.secretKey || undefined,
         }),
       });
       const json = await res.json();
@@ -102,15 +111,19 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
     setInquiringId(tx.id);
     setFeedback(null);
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (customPartnerId) headers['X-Partner-ID'] = customPartnerId;
+
       const res = await fetch('/api/snap/inquiry-va', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           trxId: tx.trxId,
           contractId: tx.contractId || tx.rawResponse?.virtualAccountData?.additionalInfo?.contractId,
           virtualAccountNo: tx.virtualAccountNo,
           channel: tx.channel,
           env: tx.env,
+          partnerId: customPartnerId || undefined,
         }),
       });
       const json = await res.json();
@@ -148,15 +161,19 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
     setDeletingId(tx.id);
     setFeedback(null);
     try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (customPartnerId) headers['X-Partner-ID'] = customPartnerId;
+
       const res = await fetch('/api/snap/delete-va', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           virtualAccountNo: tx.virtualAccountNo,
           trxId: tx.trxId,
           channel: tx.channel,
           contractId: tx.contractId || tx.rawResponse?.virtualAccountData?.additionalInfo?.contractId,
           env: tx.env,
+          partnerId: customPartnerId || undefined,
         }),
       });
       const json = await res.json();

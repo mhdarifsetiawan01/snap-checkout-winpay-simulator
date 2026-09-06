@@ -2,8 +2,8 @@ import { API_URL, getForwardHeaders } from '@/lib/api';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const env = searchParams.get('env') || '';
-  const url = `${API_URL}/api/checkout/invoice/last${env ? `?env=${env}` : ''}`;
+  const queryString = searchParams.toString();
+  const url = `${API_URL}/api/checkout/invoice/last${queryString ? `?${queryString}` : ''}`;
   const res = await fetch(url, {
     headers: getForwardHeaders(request),
     cache: 'no-store',
