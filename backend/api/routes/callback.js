@@ -17,6 +17,7 @@ async function handleSnapCallback(request, reply) {
   const snapPartnerId  = headers["x-partner-id"];
   const snapExternalId = headers["x-external-id"];
   const rawBody        = JSON.stringify(request.body);
+  const pathname       = (request.raw?.url || request.url || "").split("?")[0];
   let clientIp =
     request.clientIp ||
     headers["cf-connecting-ip"] ||
