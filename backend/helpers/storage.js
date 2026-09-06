@@ -65,6 +65,7 @@ function recordTransaction(category, data) {
     qrContent: data.qrContent || null,
     webRedirectUrl: data.webRedirectUrl || null,
     appRedirectUrl: data.appRedirectUrl || null,
+    interval: data.interval ? Number(data.interval) : (data.expiredMinutes ? Number(data.expiredMinutes) : (validCategory === "checkout" ? 5 : null)),
     rawResponse: data.rawResponse || null,
     callbackData: data.callbackData || null,
   };
@@ -120,13 +121,66 @@ function updateTransactionStatus(query, newStatus, extraData = {}) {
 }
 
 /**
+ * Periksa apakah transaksi sudah kadaluarsa berdasarkan kalkulasi waktu
+ * @param {Object} tx
+ * @returns {boolean}
+ */
+function checkIfTxExpired(tx) {
+  if (!tx || (tx.status !== "PENDING" && tx.status !== "UNPAID")) return false;
+
+  // 1. Checkout Page / Transaksi dengan parameter interval (menit)
+  if (tx.category === "checkout" || tx.type === "INVOICE" || tx.interval) {
+    const intervalMins = Number(tx.interval) > 0 ? Number(tx.interval) : 5;
+    const createdTime = tx.createdAt ? new Date(tx.createdAt).getTime() : null;
+    if (createdTime && !isNaN(createdTime)) {
+      return Date.now() > (createdTime + intervalMins * 60 * 1000);
+    }
+  }
+
+  // 2. SNAP VA / QRIS / eWallet dengan field expiredDate
+  const expiredDateStr = tx.rawResponse?.virtualAccountData?.expiredDate || tx.rawResponse?.expiredDate;
+  if (expiredDateStr) {
+    const expTime = new Date(expiredDateStr).getTime();
+    if (expTime && !isNaN(expTime)) {
+      return Date.now() > expTime;
+    }
+  }
+
+  return false;
+}
+
+/**
  * Ambil daftar transaksi (per kategori atau semua kategori digabung)
+ * Secara otomatis mengevaluasi status EXPIRED jika waktu telah terlewat.
  * @param {'all'|'va'|'qris'|'ewallet'|'checkout'} [category='all']
  * @param {number} [limit=10]
  */
 function getTransactions(category = "all", limit = 10) {
+  const categories = ["va", "qris", "ewallet", "checkout"];
+  let hasDbChanges = false;
+
+  // Auto-sync status EXPIRED di DB untuk transaksi PENDING yang sudah melewati waktu
+  for (const c of categories) {
+    const list = db.get(`transactions.${c}`).value() || [];
+    let listModified = false;
+    for (const tx of list) {
+      if (checkIfTxExpired(tx)) {
+        tx.status = "EXPIRED";
+        tx.updatedAt = new Date().toISOString();
+        listModified = true;
+        hasDbChanges = true;
+      }
+    }
+    if (listModified) {
+      db.set(`transactions.${c}`, list);
+    }
+  }
+  if (hasDbChanges) {
+    db.write();
+  }
+
   const cat = (category || "all").toLowerCase();
-  if (cat !== "all" && ["va", "qris", "ewallet", "checkout"].includes(cat)) {
+  if (cat !== "all" && categories.includes(cat)) {
     return (db.get(`transactions.${cat}`).value() || []).slice(0, limit);
   }
 
@@ -148,5 +202,6 @@ module.exports = {
   getKey,
   recordTransaction,
   updateTransactionStatus,
+  checkIfTxExpired,
   getTransactions,
 };

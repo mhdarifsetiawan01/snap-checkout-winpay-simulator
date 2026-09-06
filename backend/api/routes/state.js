@@ -100,7 +100,13 @@ async function stateRoutes(fastify) {
         } else if (statusCandidates.some(s => ["FAILED", "0003", "03", "CANCELLED"].includes(s))) {
           newStatus = "FAILED";
         } else {
-          newStatus = "PENDING";
+          // Check expiredDate if available
+          const expDateStr = vaData.expiredDate || result?.expiredDate;
+          if (expDateStr && new Date(expDateStr).getTime() < Date.now()) {
+            newStatus = "EXPIRED";
+          } else {
+            newStatus = "PENDING";
+          }
         }
       } else if (txType === "INVOICE" || txType === "CHECKOUT") {
         if (!invoiceId) return reply.code(400).send({ success: false, error: "invoiceId required" });
@@ -126,7 +132,21 @@ async function stateRoutes(fastify) {
         } else if (["FAILED", "CANCELLED", "CANCELED"].includes(statusStr)) {
           newStatus = "FAILED";
         } else {
-          newStatus = "PENDING";
+          // Time-based expiry check for Checkout Invoice (Winpay returns UNPAID even after expiry)
+          let isTimeExpired = false;
+          const createdTimeStr = responseData.created_at;
+          const createdTime = createdTimeStr ? new Date(createdTimeStr.replace(" ", "T") + "+07:00").getTime() : null;
+
+          const allCheckout = getTransactions("checkout", 50) || [];
+          const matchedTx = allCheckout.find(t => (id && t.id === id) || (invoiceId && t.invoiceId === invoiceId));
+          const intervalMins = Number(matchedTx?.interval) > 0 ? Number(matchedTx.interval) : 5;
+          const baseTime = (matchedTx?.createdAt ? new Date(matchedTx.createdAt).getTime() : null) || createdTime;
+
+          if (baseTime && (Date.now() > baseTime + intervalMins * 60 * 1000)) {
+            isTimeExpired = true;
+          }
+
+          newStatus = isTimeExpired ? "EXPIRED" : "PENDING";
         }
       } else {
         // Default check

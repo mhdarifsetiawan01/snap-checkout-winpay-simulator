@@ -62,6 +62,7 @@ async function checkoutPageRoutes(fastify) {
         invoiceId: invoiceId,
         partnerReferenceNo: payload.invoice?.ref || payload.reference,
         amount: price,
+        interval: intervalMins,
         webRedirectUrl: redirectUrl,
         redirect_url: redirectUrl,
         status: "PENDING",
@@ -111,14 +112,38 @@ async function checkoutPageRoutes(fastify) {
 
       const result = await checkoutService.findinvoice(invoiceId, false);
 
-      // Update status jika invoice sudah terbayar
-      const statusStr = String(result?.status || result?.data?.status || "").toUpperCase();
+      // Update status jika invoice terbayar / expired
+      const responseData = result?.responseData || result?.data || {};
+      const statusStr = String(responseData.status || result?.status || "").toUpperCase();
       if (statusStr === "0000" || statusStr === "PAID" || statusStr === "SETTLED" || statusStr === "SUCCESS") {
         updateTransactionStatus(
           { invoiceId: invoiceId },
           "PAID",
           { rawStatusResponse: result }
         );
+      } else if (statusStr === "EXPIRED") {
+        updateTransactionStatus(
+          { invoiceId: invoiceId },
+          "EXPIRED",
+          { rawStatusResponse: result }
+        );
+      } else {
+        // Time-based expiry check (Winpay returns UNPAID even after expiry)
+        const createdTimeStr = responseData.created_at;
+        const createdTime = createdTimeStr ? new Date(createdTimeStr.replace(" ", "T") + "+07:00").getTime() : null;
+        const { getTransactions } = require("../../helpers/storage");
+        const allCheckout = getTransactions("checkout", 50) || [];
+        const matchedTx = allCheckout.find(t => t.invoiceId === invoiceId);
+        const intervalMins = Number(matchedTx?.interval) > 0 ? Number(matchedTx.interval) : 5;
+        const baseTime = (matchedTx?.createdAt ? new Date(matchedTx.createdAt).getTime() : null) || createdTime;
+
+        if (baseTime && (Date.now() > baseTime + intervalMins * 60 * 1000)) {
+          updateTransactionStatus(
+            { invoiceId: invoiceId },
+            "EXPIRED",
+            { rawStatusResponse: result }
+          );
+        }
       }
 
       return reply.send({ success: true, invoiceId, data: result });
