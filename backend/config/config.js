@@ -36,10 +36,11 @@ const CONFIG = {
         : process.env.SNAP_BASE_URL_DEV;
   },
   get SNAP_MERCHANT_KEY() {
-    return this.isProduction
-      ? process.env.SNAP_MERCHANT_KEY_PROD
-      : process.env.SNAP_MERCHANT_KEY_DEV;
+    if (this.isProduction) return process.env.SNAP_MERCHANT_KEY_PROD;
+    if (this.isSandbox) return process.env.SNAP_MERCHANT_KEY_SANDBOX || process.env.SNAP_MERCHANT_KEY_DEV;
+    return process.env.SNAP_MERCHANT_KEY_DEV || process.env.SNAP_MERCHANT_KEY_SANDBOX;
   },
+
 
   // Key paths
   get PRIVATE_KEY_PATH() {

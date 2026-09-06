@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import ResponseViewer from '@/components/shared/ResponseViewer';
+import { useCustomPartnerId } from '@/lib/useEnv';
 
 const EWALLET_CHANNELS = [
   { value: 'SPAY',  label: 'ShopeePay' },
@@ -16,6 +17,7 @@ export default function CreateEwalletForm({ env }) {
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
   const [isError, setIsError] = useState(false);
+  const [customPartnerId] = useCustomPartnerId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -24,9 +26,15 @@ export default function CreateEwalletForm({ env }) {
       const r = await fetch('/api/snap/ewallet', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, amount, env }),
+        body: JSON.stringify({
+          channel,
+          amount,
+          env,
+          partnerId: customPartnerId || undefined,
+        }),
       });
       const data = await r.json();
+
       setIsError(!r.ok || !data.success);
       setResult(data);
       // Tampilkan redirect URL jika ada

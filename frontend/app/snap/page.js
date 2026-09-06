@@ -5,6 +5,7 @@ import CreateQRISForm    from '@/components/snap/CreateQRISForm';
 import CreateEwalletForm from '@/components/snap/CreateEwalletForm';
 import InquiryPanel      from '@/components/snap/InquiryPanel';
 import EnvSwitcher       from '@/components/shared/EnvSwitcher';
+import CredentialInfo    from '@/components/shared/CredentialInfo';
 import { useEnv }        from '@/lib/useEnv';
 
 const TABS = [
@@ -27,6 +28,10 @@ export default function SnapPage() {
 
       {/* Persistent Environment Switcher */}
       <EnvSwitcher env={env} setEnv={setEnv} />
+
+      {/* Active Credential Info */}
+      <CredentialInfo env={env} />
+
 
 
       {/* Tabs */}

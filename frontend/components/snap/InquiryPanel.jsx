@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import ResponseViewer from '@/components/shared/ResponseViewer';
+import { useCustomPartnerId } from '@/lib/useEnv';
 
 export default function InquiryPanel({ env }) {
   const [inquiryResult, setInquiryResult] = useState(null);
@@ -9,6 +10,7 @@ export default function InquiryPanel({ env }) {
   const [loadingStatus, setLoadingStatus] = useState(false);
   const [isErrInq,      setIsErrInq]      = useState(false);
   const [isErrStatus,   setIsErrStatus]   = useState(false);
+  const [customPartnerId] = useCustomPartnerId();
 
   const doInquiry = async () => {
     setLoadingInq(true); setInquiryResult(null);
@@ -16,7 +18,10 @@ export default function InquiryPanel({ env }) {
       const r = await fetch('/api/snap/inquiry-va', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ env }),
+        body: JSON.stringify({
+          env,
+          partnerId: customPartnerId || undefined,
+        }),
       });
       const data = await r.json();
       setIsErrInq(!r.ok || !data.success);
@@ -34,9 +39,13 @@ export default function InquiryPanel({ env }) {
       const r = await fetch('/api/snap/status-va', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ env }),
+        body: JSON.stringify({
+          env,
+          partnerId: customPartnerId || undefined,
+        }),
       });
       const data = await r.json();
+
       setIsErrStatus(!r.ok || !data.success);
       setStatusResult(data);
     } catch (err) {

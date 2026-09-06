@@ -3,6 +3,7 @@ import { useState } from 'react';
 import CreateInvoiceForm from '@/components/checkout/CreateInvoiceForm';
 import FindInvoicePanel  from '@/components/checkout/FindInvoicePanel';
 import EnvSwitcher       from '@/components/shared/EnvSwitcher';
+import CredentialInfo    from '@/components/shared/CredentialInfo';
 import { useEnv }        from '@/lib/useEnv';
 
 export default function CheckoutPage() {
@@ -17,6 +18,10 @@ export default function CheckoutPage() {
 
       {/* Persistent Environment Switcher */}
       <EnvSwitcher env={env} setEnv={setEnv} />
+
+      {/* Active Credential Info */}
+      <CredentialInfo env={env} />
+
 
 
       <div className="two-col">

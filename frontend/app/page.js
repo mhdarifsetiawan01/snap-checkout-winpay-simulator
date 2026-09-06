@@ -1,6 +1,7 @@
-import StatePanel   from '@/components/shared/StatePanel';
-import CallbackLog  from '@/components/shared/CallbackLog';
-import { API_URL }  from '@/lib/api';
+import StatePanel          from '@/components/shared/StatePanel';
+import CallbackLog         from '@/components/shared/CallbackLog';
+import DashboardEnvSection from '@/components/dashboard/DashboardEnvSection';
+import { API_URL }         from '@/lib/api';
 
 async function getState() {
   try {
@@ -12,7 +13,6 @@ async function getState() {
   }
 }
 
-
 export default async function DashboardPage() {
   const state = await getState();
 
@@ -23,8 +23,10 @@ export default async function DashboardPage() {
         <p>Monitor status transaksi dan callback terakhir dari Winpay.</p>
       </div>
 
+      <DashboardEnvSection />
       <StatePanel  initialState={state} />
       <CallbackLog initialCallback={state?.lastCallbackReceived} />
     </div>
   );
 }
+

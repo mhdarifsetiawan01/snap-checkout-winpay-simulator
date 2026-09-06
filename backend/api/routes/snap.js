@@ -39,11 +39,15 @@ async function snapRoutes(fastify) {
   // ─── Create Virtual Account ─────────────────────────────────────────────
   fastify.post("/snap/va", async (request, reply) => {
     try {
-      const { channel, amount, env } = request.body || {};
+      const { channel, amount, env, partnerId } = request.body || {};
       applyEnvOverride(env || request.query.env);
 
       if (!channel) return reply.code(400).send({ error: "Field 'channel' wajib diisi" });
       if (!amount)  return reply.code(400).send({ error: "Field 'amount' wajib diisi" });
+
+      if (partnerId && String(partnerId).trim() !== "") {
+        process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
+      }
 
       // Inject override ke dalam template via env vars sementara
       process.env.CHANNEL = channel;
@@ -54,9 +58,11 @@ async function snapRoutes(fastify) {
 
       delete process.env.CHANNEL;
       delete process.env.AMOUNT;
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
 
       return reply.send({ success: true, data: result });
     } catch (err) {
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
       return reply.code(500).send({ success: false, error: err.message });
     }
   });
@@ -64,11 +70,20 @@ async function snapRoutes(fastify) {
   // ─── Inquiry VA ─────────────────────────────────────────────────────────
   fastify.post("/snap/inquiry-va", async (request, reply) => {
     try {
-      applyEnvOverride(request.body?.env || request.query.env);
+      const { env, partnerId } = request.body || {};
+      applyEnvOverride(env || request.query.env);
+
+      if (partnerId && String(partnerId).trim() !== "") {
+        process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
+      }
+
       const payload = inquiryVABody();
       const result  = await snapService.inquiryva(payload, false);
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
+
       return reply.send({ success: true, data: result });
     } catch (err) {
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
       return reply.code(500).send({ success: false, error: err.message });
     }
   });
@@ -76,11 +91,20 @@ async function snapRoutes(fastify) {
   // ─── Payment Status VA ───────────────────────────────────────────────────
   fastify.post("/snap/status-va", async (request, reply) => {
     try {
-      applyEnvOverride(request.body?.env || request.query.env);
+      const { env, partnerId } = request.body || {};
+      applyEnvOverride(env || request.query.env);
+
+      if (partnerId && String(partnerId).trim() !== "") {
+        process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
+      }
+
       const payload = paymentStatusBody();
       const result  = await snapService.statusva(payload, false);
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
+
       return reply.send({ success: true, data: result });
     } catch (err) {
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
       return reply.code(500).send({ success: false, error: err.message });
     }
   });
@@ -88,18 +112,24 @@ async function snapRoutes(fastify) {
   // ─── Create QRIS ─────────────────────────────────────────────────────────
   fastify.post("/snap/qris", async (request, reply) => {
     try {
-      const { amount, env } = request.body || {};
+      const { amount, env, partnerId } = request.body || {};
       applyEnvOverride(env || request.query.env);
 
       if (!amount) return reply.code(400).send({ error: "Field 'amount' wajib diisi" });
+
+      if (partnerId && String(partnerId).trim() !== "") {
+        process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
+      }
 
       process.env.AMOUNT = String(amount);
       const payload = createQRISBody();
       const result  = await snapService.createqris(payload, false);
       delete process.env.AMOUNT;
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
 
       return reply.send({ success: true, data: result });
     } catch (err) {
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
       return reply.code(500).send({ success: false, error: err.message });
     }
   });
@@ -107,11 +137,15 @@ async function snapRoutes(fastify) {
   // ─── Create eWallet ──────────────────────────────────────────────────────
   fastify.post("/snap/ewallet", async (request, reply) => {
     try {
-      const { channel, amount, env } = request.body || {};
+      const { channel, amount, env, partnerId } = request.body || {};
       applyEnvOverride(env || request.query.env);
 
       if (!channel) return reply.code(400).send({ error: "Field 'channel' wajib diisi (SPAY/DANA/OVO/SC/ASTRA)" });
       if (!amount)  return reply.code(400).send({ error: "Field 'amount' wajib diisi" });
+
+      if (partnerId && String(partnerId).trim() !== "") {
+        process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
+      }
 
       process.env.CHANNEL = channel;
       process.env.AMOUNT  = String(amount);
@@ -121,9 +155,11 @@ async function snapRoutes(fastify) {
 
       delete process.env.CHANNEL;
       delete process.env.AMOUNT;
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
 
       return reply.send({ success: true, data: result });
     } catch (err) {
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
       return reply.code(500).send({ success: false, error: err.message });
     }
   });

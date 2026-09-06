@@ -23,14 +23,17 @@ async function sendRequest(endpoint, payload, simulate = true) {
 
   const externalId = generateExternalId("VA"); // bisa ganti prefix sesuai jenis request
 
+  const partnerId = process.env.SNAP_PARTNER_ID_OVERRIDE || CONFIG.SNAP_MERCHANT_KEY;
+
   const headers = {
     "Content-Type": "application/json", 
     "X-TIMESTAMP": timestamp,
     "X-SIGNATURE": signature,
-    "X-PARTNER-ID": CONFIG.SNAP_MERCHANT_KEY,
+    "X-PARTNER-ID": partnerId,
     "X-EXTERNAL-ID": externalId,
     "CHANNEL-ID": 'WEB'
   };
+
 
   if (!simulate) {
     logger.info("=== SIMULATED REQUEST ===");

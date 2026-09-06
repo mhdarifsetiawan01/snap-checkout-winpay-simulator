@@ -23,6 +23,57 @@ async function stateRoutes(fastify) {
 
     return reply.send({ success: true, data: state });
   });
+
+  // ─── GET /api/config — Info Credential & URL Berdasarkan Environment ────────
+  fastify.get("/config", async (request, reply) => {
+    require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"), override: true });
+
+    const env = request.query.env || process.env.NODE_ENV || "development";
+    const isProd = env === "production" || env === "prod";
+    const isSandbox = env === "sandbox";
+
+
+    const snapBaseUrl = isProd
+      ? process.env.SNAP_BASE_URL_PROD
+      : isSandbox
+        ? process.env.SNAP_BASE_URL_SANDBOX
+        : process.env.SNAP_BASE_URL_DEV;
+
+    const snapPartnerId = isProd
+      ? process.env.SNAP_MERCHANT_KEY_PROD
+      : isSandbox
+        ? (process.env.SNAP_MERCHANT_KEY_SANDBOX || process.env.SNAP_MERCHANT_KEY_DEV)
+        : (process.env.SNAP_MERCHANT_KEY_DEV || process.env.SNAP_MERCHANT_KEY_SANDBOX);
+
+
+    const checkoutBaseUrl = isProd
+      ? process.env.CHECKOUT_BASE_URL_PROD
+      : isSandbox
+        ? process.env.CHECKOUT_BASE_URL_SANDBOX
+        : process.env.CHECKOUT_BASE_URL_DEV;
+
+    const checkoutClientKey = isProd
+      ? process.env.CHECKOUT_CLIENT_KEY_PROD
+      : isSandbox
+        ? process.env.CHECKOUT_CLIENT_KEY_SANDBOX
+        : process.env.CHECKOUT_CLIENT_KEY_DEV;
+
+    return reply.send({
+      success: true,
+      data: {
+        env,
+        snap: {
+          baseUrl: snapBaseUrl || "—",
+          partnerId: snapPartnerId || "—",
+          privateKey: isProd ? "private_key_prod.pem" : "private_key_dev.pem",
+        },
+        checkout: {
+          baseUrl: checkoutBaseUrl || "—",
+          clientKey: checkoutClientKey || "—",
+        },
+      },
+    });
+  });
 }
 
 module.exports = stateRoutes;

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import ResponseViewer from '@/components/shared/ResponseViewer';
+import { useCustomPartnerId } from '@/lib/useEnv';
 
 const VA_CHANNELS = ['PERMATA', 'BRI', 'BNI', 'BCA', 'MANDIRI', 'INDOMARET', 'BTN', 'CIMB'];
 
@@ -10,6 +11,7 @@ export default function CreateVAForm({ env }) {
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
   const [isError, setIsError] = useState(false);
+  const [customPartnerId] = useCustomPartnerId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,9 +20,15 @@ export default function CreateVAForm({ env }) {
       const r = await fetch('/api/snap/va', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ channel, amount, env }),
+        body: JSON.stringify({
+          channel,
+          amount,
+          env,
+          partnerId: customPartnerId || undefined,
+        }),
       });
       const data = await r.json();
+
       setIsError(!r.ok || !data.success);
       setResult(data);
     } catch (err) {

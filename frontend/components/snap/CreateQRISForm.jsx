@@ -1,12 +1,14 @@
 'use client';
 import { useState } from 'react';
 import ResponseViewer from '@/components/shared/ResponseViewer';
+import { useCustomPartnerId } from '@/lib/useEnv';
 
 export default function CreateQRISForm({ env }) {
   const [amount,  setAmount]  = useState('25000');
   const [loading, setLoading] = useState(false);
   const [result,  setResult]  = useState(null);
   const [isError, setIsError] = useState(false);
+  const [customPartnerId] = useCustomPartnerId();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,9 +17,14 @@ export default function CreateQRISForm({ env }) {
       const r = await fetch('/api/snap/qris', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, env }),
+        body: JSON.stringify({
+          amount,
+          env,
+          partnerId: customPartnerId || undefined,
+        }),
       });
       const data = await r.json();
+
       setIsError(!r.ok || !data.success);
       setResult(data);
     } catch (err) {
