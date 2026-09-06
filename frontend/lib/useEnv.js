@@ -3,8 +3,9 @@ import { useState, useEffect } from 'react';
 
 const STORAGE_KEY = 'winpay_sim_env';
 export const ENV_OPTIONS = ['development', 'sandbox', 'production'];
+export const DEFAULT_ENV = process.env.NEXT_PUBLIC_DEFAULT_ENV || 'development';
 
-export function useEnv(defaultEnv = 'development') {
+export function useEnv(defaultEnv = DEFAULT_ENV) {
   const [env, setEnvState] = useState(defaultEnv);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -14,11 +15,13 @@ export function useEnv(defaultEnv = 'development') {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved && ENV_OPTIONS.includes(saved)) {
         setEnvState(saved);
+      } else {
+        setEnvState(defaultEnv);
       }
     } catch {
       // Ignore localStorage read errors in restricted contexts
     }
-  }, []);
+  }, [defaultEnv]);
 
   const setEnv = (newEnv) => {
     if (ENV_OPTIONS.includes(newEnv)) {

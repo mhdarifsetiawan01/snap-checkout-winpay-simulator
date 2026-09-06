@@ -18,7 +18,7 @@ const TABS = [
 
 export default function SnapPage() {
   const [activeTab, setActiveTab] = useState('va');
-  const [env, setEnv] = useEnv('development');
+  const [env, setEnv] = useEnv();
 
   return (
     <div>

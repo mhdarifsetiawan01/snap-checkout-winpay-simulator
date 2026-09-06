@@ -19,13 +19,26 @@ function verifySnapCallback({ httpMethod = "POST", path, body, timestamp, signat
     return false;
   }
 
-  if (!fs.existsSync(publicKeyPath)) {
-    logger.warn(`⚠️ File Public Key Winpay tidak ditemukan di: ${publicKeyPath}. Validasi signature dilewati.`);
+  let publicKey = "";
+  const envPubKey = process.env.WINPAY_PUBLIC_KEY_PROD || process.env.WINPAY_PUBLIC_KEY_DEV || process.env.WINPAY_PUBLIC_KEY;
+  if (envPubKey) {
+    if (!envPubKey.includes("-----BEGIN") && envPubKey.length > 100) {
+      try {
+        publicKey = Buffer.from(envPubKey, "base64").toString("utf8");
+      } catch (_) {}
+    } else {
+      publicKey = envPubKey.replace(/\\n/g, "\n");
+    }
+  } else if (publicKeyPath && fs.existsSync(publicKeyPath)) {
+    publicKey = fs.readFileSync(publicKeyPath, "utf8");
+  }
+
+  if (!publicKey) {
+    logger.warn(`⚠️ Public Key Winpay tidak ditemukan di env atau file: ${publicKeyPath}. Validasi signature dilewati.`);
     return false;
   }
 
   try {
-    const publicKey = fs.readFileSync(publicKeyPath, "utf8");
     const minifiedBody = typeof body === "string" ? body : JSON.stringify(body);
     const bodyHash = crypto.createHash("sha256").update(minifiedBody).digest("hex").toLowerCase();
 

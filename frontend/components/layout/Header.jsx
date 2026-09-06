@@ -11,7 +11,7 @@ const pageTitles = {
 
 export default function Header() {
   const pathname = usePathname();
-  const [env, setEnv, isMounted] = useEnv('development');
+  const [env, setEnv, isMounted] = useEnv();
   const [customPartnerId] = useCustomPartnerId();
   const [defaultPartnerId, setDefaultPartnerId] = useState(null);
   const page = pageTitles[pathname] || pageTitles['/'];

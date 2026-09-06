@@ -201,7 +201,8 @@ async function stateRoutes(fastify) {
   fastify.get("/config", async (request, reply) => {
     require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"), override: true });
 
-    const env = request.query.env || process.env.NODE_ENV || "development";
+    const defaultEnv = process.env.DEFAULT_ENV || process.env.NODE_ENV || "development";
+    const env = request.query.env || defaultEnv;
     const isProd = env === "production" || env === "prod";
     const isSandbox = env === "sandbox";
 

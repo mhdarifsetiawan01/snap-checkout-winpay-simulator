@@ -8,7 +8,7 @@ import TransactionHistory from '@/components/shared/TransactionHistory';
 import { useEnv }        from '@/lib/useEnv';
 
 export default function CheckoutPage() {
-  const [env, setEnv] = useEnv('development');
+  const [env, setEnv] = useEnv();
 
   return (
     <div>

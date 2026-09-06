@@ -3,6 +3,17 @@ const crypto = require("crypto");
 const CONFIG = require("../config/config");
 
 function getPrivateKey() {
+  const envKey = (CONFIG.isProduction ? process.env.SNAP_PRIVATE_KEY_PROD : process.env.SNAP_PRIVATE_KEY_DEV) || process.env.SNAP_PRIVATE_KEY;
+  if (envKey) {
+    // Jika format base64, decode terlebih dahulu
+    if (!envKey.includes("-----BEGIN") && envKey.length > 100) {
+      try {
+        return Buffer.from(envKey, "base64").toString("utf8");
+      } catch (_) {}
+    }
+    return envKey.replace(/\\n/g, "\n");
+  }
+
   if (fs.existsSync(CONFIG.PRIVATE_KEY_PATH)) {
     return fs.readFileSync(CONFIG.PRIVATE_KEY_PATH, "utf8");
   }

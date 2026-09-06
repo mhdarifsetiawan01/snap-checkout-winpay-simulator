@@ -4,7 +4,7 @@ import EnvSwitcher from '@/components/shared/EnvSwitcher';
 import CredentialInfo from '@/components/shared/CredentialInfo';
 
 export default function DashboardEnvSection() {
-  const [env, setEnv, isMounted] = useEnv('development');
+  const [env, setEnv, isMounted] = useEnv();
 
   if (!isMounted) return null;
 

@@ -9,7 +9,7 @@ if (dns.setDefaultResultOrder) {
 
 const CONFIG = {
   get env() {
-    return process.env.NODE_ENV || "development";
+    return process.env.NODE_ENV || process.env.DEFAULT_ENV || "development";
   },
   get isProduction() {
     return this.env === "production";

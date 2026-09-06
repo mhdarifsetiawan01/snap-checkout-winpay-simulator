@@ -8,8 +8,9 @@ const { getKey, saveKey, recordTransaction, updateTransactionStatus } = require(
 
 function applyEnvOverride(envParam) {
   const allowed = ["development", "sandbox", "production", "prod"];
-  if (envParam && allowed.includes(envParam)) {
-    process.env.NODE_ENV = envParam === "prod" ? "production" : envParam;
+  const target = envParam || process.env.DEFAULT_ENV || process.env.NODE_ENV || "development";
+  if (allowed.includes(target)) {
+    process.env.NODE_ENV = target === "prod" ? "production" : target;
     delete require.cache[require.resolve("../../config/config")];
   }
 }

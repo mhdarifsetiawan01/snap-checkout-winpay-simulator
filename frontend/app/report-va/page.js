@@ -28,7 +28,7 @@ function formatForInput(d) {
 }
 
 export default function ReportVaPage() {
-  const [env, setEnv] = useEnv('development');
+  const [env, setEnv] = useEnv();
   const [customPartnerId] = useCustomPartnerId();
 
   // Default filter: 7 hari terakhir
