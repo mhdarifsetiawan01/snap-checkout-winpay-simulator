@@ -10,8 +10,10 @@ const { createEwalletBody }  = require("../../templates/snap/createEwallet");
 const { inquiryVABody }      = require("../../templates/snap/inquiryVA");
 const { paymentStatusBody }  = require("../../templates/snap/paymentStatus");
 const { deleteVABody }       = require("../../templates/snap/deleteVA");
+const { transactionListBody } = require("../../templates/snap/transactionList");
 const { generateTimestamp }  = require("../../helpers/timestamp");
 const { getKey, getTransactions, recordTransaction, updateTransactionStatus } = require("../../helpers/storage");
+const { resolveCleanVaNumber } = require("../../helpers/trxId");
 
 /**
  * Utility: override NODE_ENV dari query param ?env=
@@ -67,16 +69,16 @@ async function snapRoutes(fastify) {
       delete process.env.AMOUNT;
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
 
-      const vaNo = result?.virtualAccountData?.virtualAccountNo ||
-                   result?.virtualAccountData?.customerNo ||
-                   payload.virtualAccountNo;
+      const cleanVa = result?.virtualAccountData ? resolveCleanVaNumber(result.virtualAccountData) : (payload.customerNo || payload.virtualAccountNo);
 
       recordTransaction("va", {
         type: "VA",
         channel: channel,
         trxId: result?.virtualAccountData?.trxId || payload.trxId,
+        contractId: result?.virtualAccountData?.additionalInfo?.contractId,
         partnerReferenceNo: payload.partnerReferenceNo || payload.trxId,
-        virtualAccountNo: vaNo,
+        virtualAccountNo: cleanVa,
+        customerNo: cleanVa,
         amount: amount,
         status: "PENDING",
         env: process.env.NODE_ENV,
@@ -107,7 +109,13 @@ async function snapRoutes(fastify) {
         env: process.env.NODE_ENV,
       });
 
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || null,
+        rawError: err.message,
+      });
     }
   });
 
@@ -126,15 +134,18 @@ async function snapRoutes(fastify) {
       let txTrxId = trxId;
       let txVaNo = virtualAccountNo;
 
-      if (trxId || virtualAccountNo) {
-        const allVAs = getTransactions("va", 50);
-        const matched = allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && t.virtualAccountNo === virtualAccountNo));
-        if (matched) {
-          txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
-          txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel;
-          txTrxId = txTrxId || matched.trxId;
-          txVaNo = txVaNo || matched.virtualAccountNo;
-        }
+      const currentEnv = env || request.query.env || process.env.NODE_ENV || "development";
+      const allVAs = getTransactions("va", 50);
+      const envVAs = allVAs.filter(t => (t.env || "development") === currentEnv);
+      const matched = (trxId || virtualAccountNo)
+        ? allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && (t.virtualAccountNo === virtualAccountNo || t.customerNo === virtualAccountNo)))
+        : (envVAs[0] || allVAs[0]);
+
+      if (matched) {
+        txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
+        txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel;
+        txTrxId = txTrxId || matched.trxId;
+        txVaNo = resolveCleanVaNumber(matched.rawResponse?.virtualAccountData || { virtualAccountNo: matched.virtualAccountNo, customerNo: matched.customerNo }) || txVaNo;
       }
 
       const payload = {
@@ -166,7 +177,21 @@ async function snapRoutes(fastify) {
       return reply.send({ success: true, data: result });
     } catch (err) {
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      let errorMsg = err.message;
+      let errorData = null;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorData = parsed.error;
+        errorMsg = parsed.error?.responseMessage || parsed.error?.message || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || errorData || null,
+        rawError: err.message,
+      });
     }
   });
 
@@ -185,19 +210,22 @@ async function snapRoutes(fastify) {
       let txTrxId = trxId;
       let txVaNo = virtualAccountNo;
 
-      if (trxId || virtualAccountNo) {
-        const allVAs = getTransactions("va", 50);
-        const matched = allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && t.virtualAccountNo === virtualAccountNo));
-        if (matched) {
-          txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
-          txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel;
-          txTrxId = txTrxId || matched.trxId;
-          txVaNo = txVaNo || matched.virtualAccountNo;
-        }
+      const currentEnv = env || request.query.env || process.env.NODE_ENV || "development";
+      const allVAs = getTransactions("va", 50);
+      const envVAs = allVAs.filter(t => (t.env || "development") === currentEnv);
+      const matched = (trxId || virtualAccountNo)
+        ? allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && (t.virtualAccountNo === virtualAccountNo || t.customerNo === virtualAccountNo)))
+        : (envVAs[0] || allVAs[0]);
+
+      if (matched) {
+        txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
+        txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel;
+        txTrxId = txTrxId || matched.trxId;
+        txVaNo = resolveCleanVaNumber(matched.rawResponse?.virtualAccountData || { virtualAccountNo: matched.virtualAccountNo, customerNo: matched.customerNo }) || txVaNo;
       }
 
       const payload = {
-        virtualAccountNo: String(txVaNo || getKey("lastVirtualAccountNo") || "").trim(),
+        virtualAccountNo: resolveCleanVaNumber(txVaNo || getKey("lastCustomerNo") || getKey("lastVirtualAccountNo") || ""),
         trxId: txTrxId || getKey("lastTrxId"),
         additionalInfo: {
           contractId: txContractId || getKey("lastContractId"),
@@ -245,7 +273,21 @@ async function snapRoutes(fastify) {
       return reply.send({ success: true, data: result });
     } catch (err) {
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      let errorMsg = err.message;
+      let errorData = null;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorData = parsed.error;
+        errorMsg = parsed.error?.responseMessage || parsed.error?.message || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || errorData || null,
+        rawError: err.message,
+      });
     }
   });
 
@@ -264,19 +306,22 @@ async function snapRoutes(fastify) {
       let txTrxId = trxId;
       let txVaNo = virtualAccountNo;
 
-      if (trxId || virtualAccountNo) {
-        const allVAs = getTransactions("va", 50);
-        const matched = allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && t.virtualAccountNo === virtualAccountNo));
-        if (matched) {
-          txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
-          txChannel = txChannel || matched.channel;
-          txTrxId = txTrxId || matched.trxId;
-          txVaNo = txVaNo || matched.virtualAccountNo;
-        }
+      const currentEnv = env || request.query.env || process.env.NODE_ENV || "development";
+      const allVAs = getTransactions("va", 50);
+      const envVAs = allVAs.filter(t => (t.env || "development") === currentEnv);
+      const matched = (trxId || virtualAccountNo)
+        ? allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && (t.virtualAccountNo === virtualAccountNo || t.customerNo === virtualAccountNo)))
+        : (envVAs[0] || allVAs[0]);
+
+      if (matched) {
+        txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
+        txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel;
+        txTrxId = txTrxId || matched.trxId;
+        txVaNo = matched.customerNo || matched.rawResponse?.virtualAccountData?.customerNo || txVaNo || matched.virtualAccountNo;
       }
 
       const payload = {
-        virtualAccountNo: String(txVaNo || getKey("lastVirtualAccountNo") || "").trim(),
+        virtualAccountNo: String(txVaNo || getKey("lastCustomerNo") || getKey("lastVirtualAccountNo") || "").trim(),
         trxId: txTrxId || getKey("lastTrxId"),
         additionalInfo: {
           contractId: txContractId || getKey("lastContractId"),
@@ -299,7 +344,21 @@ async function snapRoutes(fastify) {
       return reply.send({ success: true, data: result });
     } catch (err) {
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      let errorMsg = err.message;
+      let errorData = null;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorData = parsed.error;
+        errorMsg = parsed.error?.responseMessage || parsed.error?.message || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || errorData || null,
+        rawError: err.message,
+      });
     }
   };
 
@@ -364,7 +423,13 @@ async function snapRoutes(fastify) {
         env: process.env.NODE_ENV,
       });
 
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || null,
+        rawError: err.message,
+      });
     }
   });
 
@@ -431,7 +496,56 @@ async function snapRoutes(fastify) {
         env: process.env.NODE_ENV,
       });
 
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || null,
+        rawError: err.message,
+      });
+    }
+  });
+
+  // ─── SNAP Report: Transaction History List (Service Code 12) ────────────
+  fastify.post("/snap/report/transaction-list", async (request, reply) => {
+    try {
+      const { fromDateTime, toDateTime, pageSize, pageNumber, partnerReferenceNo, env, partnerId } = request.body || {};
+      applyEnvOverride(env || request.query.env);
+
+      if (partnerId && String(partnerId).trim() !== "") {
+        process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
+      }
+
+      const payload = transactionListBody({
+        fromDateTime,
+        toDateTime,
+        pageSize: pageSize || 10,
+        pageNumber: pageNumber || 1,
+        partnerReferenceNo,
+      });
+
+      const result = await snapService.transactionlist(payload, false);
+
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
+
+      return reply.send({ success: true, data: result });
+    } catch (err) {
+      delete process.env.SNAP_PARTNER_ID_OVERRIDE;
+      const statusCode = err.statusCode || err.response?.status || 500;
+      let errorMsg = err.message;
+      let errorData = null;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorData = parsed.error;
+        errorMsg = parsed.error?.responseMessage || parsed.error?.message || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || errorData || null,
+        rawError: err.message,
+      });
     }
   });
 }

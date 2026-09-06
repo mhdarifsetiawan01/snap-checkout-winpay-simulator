@@ -7,6 +7,7 @@ const navItems = [
   { href: '/',         icon: '◈', label: 'Dashboard' },
   { href: '/snap',     icon: '⬡', label: 'SNAP API' },
   { href: '/checkout', icon: '◻', label: 'Checkout Page' },
+  { href: '/report-va', icon: '📊', label: 'Report VA' },
 ];
 
 export default function Sidebar() {
@@ -51,6 +52,7 @@ export default function Sidebar() {
           <Link
             key={href}
             href={href}
+            prefetch={false}
             className={`nav-link ${pathname === href ? 'active' : ''}`}
           >
             <span className="nav-icon">{icon}</span>

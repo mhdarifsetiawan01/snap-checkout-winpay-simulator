@@ -23,7 +23,9 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/transactions?category=${activeTab}&limit=10`);
+      const res = await fetch(`/api/transactions?category=${activeTab}&limit=10&_t=${Date.now()}`, {
+        cache: 'no-store',
+      });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setTransactions(json.data);
@@ -37,6 +39,21 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
 
   useEffect(() => {
     fetchTransactions();
+
+    const onFocus = () => {
+      fetchTransactions();
+    };
+
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        fetchTransactions();
+      }
+    });
+
+    return () => {
+      window.removeEventListener('focus', onFocus);
+    };
   }, [fetchTransactions]);
 
   const handleCheckStatus = async (tx) => {

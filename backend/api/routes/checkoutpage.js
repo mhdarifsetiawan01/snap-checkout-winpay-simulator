@@ -93,7 +93,13 @@ async function checkoutPageRoutes(fastify) {
         env: process.env.NODE_ENV,
       });
 
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || null,
+        rawError: err.message,
+      });
     }
   });
 
@@ -148,7 +154,21 @@ async function checkoutPageRoutes(fastify) {
 
       return reply.send({ success: true, invoiceId, data: result });
     } catch (err) {
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      let errorMsg = err.message;
+      let errorData = null;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorData = parsed.error;
+        errorMsg = parsed.error?.message || parsed.error?.status || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || errorData || null,
+        rawError: err.message,
+      });
     }
   });
 }

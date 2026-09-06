@@ -7,6 +7,7 @@ const { generateSignature } = require("../helpers/signature");
 const { generateExternalId } = require("../helpers/externalId");
 const logger = require("../helpers/logger");
 const { saveKey } = require("../helpers/storage");
+const { resolveCleanVaNumber } = require("../helpers/trxId");
 
 const httpAgent = new http.Agent({ family: 4, keepAlive: false });
 const httpsAgent = new https.Agent({ family: 4, keepAlive: false });
@@ -66,8 +67,9 @@ async function sendRequest(endpoint, payload, simulate = true, httpMethod = "POS
   } catch (err) {
     // log error
     const errorData = err.response?.data || err.message;
+    const statusCode = err.response?.status || 500;
     logger.error("❌ Request Failed:", errorData);
-    throw new Error(
+    const customErr = new Error(
       JSON.stringify(
         {
           method: httpMethod,
@@ -80,6 +82,17 @@ async function sendRequest(endpoint, payload, simulate = true, httpMethod = "POS
         2
       )
     );
+    customErr.statusCode = statusCode;
+    customErr.response = err.response;
+    customErr.responseData = err.response?.data || null;
+    customErr.details = {
+      method: httpMethod,
+      endpoint,
+      error: errorData,
+      stringToSign,
+      timestamp,
+    };
+    throw customErr;
   }
 }
 
@@ -103,14 +116,11 @@ async function createva(payload = {}, simulate = true) {
       await saveKey("lastTrxId", vaData.trxId);
       logger.info(`💾 trxid saved: ${vaData.trxId}`);
     }
-    if (vaData.virtualAccountNo) {
-      if (payload.additionalInfo.channel == "INDOMARET") {
-        await saveKey("lastVirtualAccountNo", vaData.customerNo);
-        logger.info(`💾 customerNo saved: ${vaData.customerNo}`);
-      } else {
-        await saveKey("lastVirtualAccountNo", vaData.virtualAccountNo);
-        logger.info(`💾 VA Number saved: ${vaData.virtualAccountNo}`);
-      }
+    if (vaData.customerNo || vaData.virtualAccountNo) {
+      const cleanVa = resolveCleanVaNumber(vaData);
+      await saveKey("lastVirtualAccountNo", cleanVa);
+      await saveKey("lastCustomerNo", cleanVa);
+      logger.info(`💾 VA Number saved: ${cleanVa}`);
     }
     if (vaData.additionalInfo.channel) {
       await saveKey("lastChannel", vaData.additionalInfo.channel);
@@ -132,6 +142,9 @@ async function inquiryva(payload = {}, simulate = true) {
  * Payment Status
  */
 async function statusva(payload = {}, simulate = true) {
+  if (payload.virtualAccountNo) {
+    payload.virtualAccountNo = resolveCleanVaNumber(payload.virtualAccountNo);
+  }
   return await sendRequest("/v1.0/transfer-va/status", payload, simulate);
 }
 
@@ -180,10 +193,17 @@ async function createewallet(payload = {}, simulate = false) {
 }
 
 async function deleteva(payload = {}, simulate = false) {
+  if (payload.virtualAccountNo) {
+    payload.virtualAccountNo = resolveCleanVaNumber(payload.virtualAccountNo);
+  }
   // Winpay SNAP requires POST method for /v1.0/transfer-va/delete-va
   return await sendRequest("/v1.0/transfer-va/delete-va", payload, simulate, "POST");
 }
 
-module.exports = { createva, inquiryva, statusva, deleteva, createqris, createewallet };
+async function transactionlist(payload = {}, simulate = false) {
+  return await sendRequest("/v1.0/transaction-history-list", payload, simulate, "POST");
+}
+
+module.exports = { createva, inquiryva, statusva, deleteva, createqris, createewallet, transactionlist };
 
 

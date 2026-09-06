@@ -1,6 +1,7 @@
 "use strict";
 
 const { getKey, getTransactions, updateTransactionStatus } = require("../../helpers/storage");
+const { resolveCleanVaNumber } = require("../../helpers/trxId");
 const snapService = require("../../services/snap");
 const checkoutService = require("../../services/checkoutpage");
 const { paymentStatusBody } = require("../../templates/snap/paymentStatus");
@@ -61,16 +62,20 @@ async function stateRoutes(fastify) {
 
         // Cari data transaksi spesifik dari database lokal jika ada
         const allVAs = getTransactions("va", 50);
-        const matched = allVAs.find(t => (id && t.id === id) || (trxId && t.trxId === trxId) || (virtualAccountNo && t.virtualAccountNo === virtualAccountNo));
+        const matched = allVAs.find(t => (id && t.id === id) || (trxId && t.trxId === trxId) || (virtualAccountNo && (t.virtualAccountNo === virtualAccountNo || t.customerNo === virtualAccountNo)));
         if (matched) {
+          if (!env && matched.env) {
+            process.env.NODE_ENV = matched.env === "prod" ? "production" : matched.env;
+            delete require.cache[require.resolve("../../config/config")];
+          }
           txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
           txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel || matched.rawResponse?.additionalInfo?.channel;
           txTrxId = txTrxId || matched.trxId;
-          txVaNo = txVaNo || matched.virtualAccountNo;
+          txVaNo = resolveCleanVaNumber(matched.rawResponse?.virtualAccountData || { virtualAccountNo: matched.virtualAccountNo, customerNo: matched.customerNo }) || txVaNo;
         }
 
         const payload = {
-          virtualAccountNo: String(txVaNo || getKey("lastVirtualAccountNo") || "").trim(),
+          virtualAccountNo: resolveCleanVaNumber(txVaNo || getKey("lastCustomerNo") || getKey("lastVirtualAccountNo") || ""),
           trxId: txTrxId || getKey("lastTrxId"),
           additionalInfo: {
             contractId: txContractId || getKey("lastContractId"),
@@ -174,7 +179,21 @@ async function stateRoutes(fastify) {
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
       delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
       delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
-      return reply.code(500).send({ success: false, error: err.message });
+      const statusCode = err.statusCode || err.response?.status || 500;
+      let errorMsg = err.message;
+      let errorData = null;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorData = parsed.error;
+        errorMsg = parsed.error?.responseMessage || parsed.error?.message || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      return reply.code(statusCode).send({
+        success: false,
+        error: errorMsg,
+        data: err.responseData || err.response?.data || errorData || null,
+        rawError: err.message,
+      });
     }
   });
 

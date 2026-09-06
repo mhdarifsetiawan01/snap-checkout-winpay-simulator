@@ -57,8 +57,13 @@ async function sendRequest(endpoint, payload, simulate = true) {
     return data;
   } catch (err) {
     const errorData = err.response?.data || err.message;
+    const statusCode = err.response?.status || 500;
     logger.error("❌ Request Failed:", errorData);
-    throw new Error(JSON.stringify({ url, error: errorData }, null, 2));
+    const customErr = new Error(JSON.stringify({ url, error: errorData }, null, 2));
+    customErr.statusCode = statusCode;
+    customErr.response = err.response;
+    customErr.responseData = err.response?.data || null;
+    throw customErr;
   }
 }
 
@@ -100,7 +105,10 @@ async function findinvoice(invoiceId, simulate = true) {
     return response.data;
   } catch (err) {
     const errorData = err.response?.data || err.message;
+    const statusCode = err.response?.status || 500;
     logger.error("❌ Checkout Find Invoice Failed:", errorData);
+    err.statusCode = statusCode;
+    err.responseData = err.response?.data || null;
     throw err;
   }
 }

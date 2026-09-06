@@ -1,6 +1,6 @@
-require("dotenv").config();
-const dns = require("dns");
 const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../.env") });
+const dns = require("dns");
 
 // Prioritaskan IPv4 untuk menghindari timeout resolusi IPv6 pada endpoint Cloudflare
 if (dns.setDefaultResultOrder) {

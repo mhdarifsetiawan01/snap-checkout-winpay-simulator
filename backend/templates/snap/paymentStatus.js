@@ -1,12 +1,15 @@
 const { getKey } = require("../../helpers/storage");
 
 function paymentStatusBody() {
+  const customerNo = getKey("lastCustomerNo");
   const virtualAccountNo = getKey("lastVirtualAccountNo");
   const channel = getKey("lastChannel");
   const contractId = getKey("lastContractId");
   const trxId = getKey("lastTrxId");
 
-  if (!virtualAccountNo) {
+  const targetVa = (customerNo || virtualAccountNo || "").trim();
+
+  if (!targetVa) {
     throw new Error("No. Virtual Account tidak ditemukan. Jalankan createVA dulu.");
   }
 
@@ -19,7 +22,7 @@ function paymentStatusBody() {
   }
 
   return {
-    virtualAccountNo: virtualAccountNo,
+    virtualAccountNo: targetVa,
     additionalInfo: {
         contractId: contractId,
         channel: channel,
