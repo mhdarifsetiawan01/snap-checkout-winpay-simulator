@@ -78,10 +78,10 @@ async function buildServer() {
 
     if (isWebhook) {
       logger.info(`📥 [WEBHOOK HIT] ${request.method} ${request.url} | 🌐 Client IP: ${ip}${country}`);
-    } else if (!isHealthCheck) {
-      logger.info(`🌐 [HTTP ${request.method}] ${request.url} | 🌐 Client IP: ${ip}${country}`);
+    } else if (isHealthCheck) {
+      logger.info(`🌐 [HEALTH CHECK] ${request.method} ${request.url} | 🌐 Client IP: ${ip}${country}`);
     } else {
-      logger.debug(`🌐 [HEALTH CHECK] ${request.method} ${request.url} | 🌐 Client IP: ${ip}${country}`);
+      logger.info(`🌐 [HTTP ${request.method}] ${request.url} | 🌐 Client IP: ${ip}${country}`);
     }
 
     // Bypass check untuk OPTIONS (CORS preflight), Health Check, dan Webhook Callbacks

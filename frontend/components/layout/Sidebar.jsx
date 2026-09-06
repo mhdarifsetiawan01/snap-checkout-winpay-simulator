@@ -24,8 +24,10 @@ export default function Sidebar() {
       }
     };
     check();
+    const timer = setInterval(check, 60000); // Polling setiap 60 detik (1 menit)
     return () => {
       isMounted = false;
+      clearInterval(timer);
     };
   }, []);
 
