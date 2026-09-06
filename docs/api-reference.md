@@ -116,6 +116,39 @@ Cek payment status Virtual Account.
 
 ---
 
+### `POST /api/snap/delete-va` / `DELETE /api/snap/va`
+
+Hapus / Batalkan Virtual Account aktif.
+
+**Endpoint Winpay SNAP**: `POST /v1.0/transfer-va/delete-va`
+
+**Request Body:** *(opsional — data default diambil dari db.json jika kosong)*
+```json
+{
+  "virtualAccountNo": "7270049621563864",
+  "trxId": "INV-1788677740332",
+  "channel": "PERMATA",
+  "contractId": "pr7a1e768e-5f3a-4bb9-82af-a5a22188bba1"
+}
+```
+
+**Response (Success):**
+```json
+{
+  "responseCode": "2003100",
+  "responseMessage": "Success",
+  "virtualAccountData": {
+    "trxId": "INV-1788677740332"
+  },
+  "additionalInfo": {
+    "contractId": "pr7a1e768e-5f3a-4bb9-82af-a5a22188bba1",
+    "channel": "PERMATA"
+  }
+}
+```
+
+---
+
 ## 📱 SNAP API — QRIS
 
 ### `POST /api/snap/qris`

@@ -6,6 +6,7 @@ import CreateEwalletForm from '@/components/snap/CreateEwalletForm';
 import InquiryPanel      from '@/components/snap/InquiryPanel';
 import EnvSwitcher       from '@/components/shared/EnvSwitcher';
 import CredentialInfo    from '@/components/shared/CredentialInfo';
+import TransactionHistory from '@/components/shared/TransactionHistory';
 import { useEnv }        from '@/lib/useEnv';
 
 const TABS = [
@@ -31,8 +32,6 @@ export default function SnapPage() {
 
       {/* Active Credential Info */}
       <CredentialInfo env={env} />
-
-
 
       {/* Tabs */}
       <div className="tabs">
@@ -62,8 +61,8 @@ export default function SnapPage() {
             <div className="card-title">💡 Info</div>
             {activeTab === 'va' && (
               <ul style={{ paddingLeft: 16, color: 'var(--text-secondary)', fontSize: 13, lineHeight: 2 }}>
-                <li>VA Number akan disimpan otomatis ke db.json</li>
-                <li>Gunakan tab <b>Inquiry & Status</b> untuk cek setelah transaksi</li>
+                <li>VA Number akan disimpan otomatis ke database JSON</li>
+                <li>Gunakan tombol <b>Cek Status</b> di tabel untuk verifikasi realtime</li>
                 <li>Channel INDOMARET: gunakan <b>customerNo</b>, bukan VA number</li>
               </ul>
             )}
@@ -91,6 +90,9 @@ export default function SnapPage() {
           </div>
         </div>
       </div>
+
+      {/* Transaction History Section */}
+      <TransactionHistory defaultCategory={activeTab === 'inquiry' ? 'va' : activeTab} />
     </div>
   );
 }

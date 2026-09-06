@@ -4,7 +4,7 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"
 
 const CONFIG = require("../../config/config");
 const { verifySnapCallback, verifyCheckoutCallback } = require("../../helpers/callback-verifier");
-const { saveKey } = require("../../helpers/storage");
+const { saveKey, updateTransactionStatus } = require("../../helpers/storage");
 const logger = require("../../helpers/logger");
 
 /**
@@ -45,6 +45,21 @@ async function handleSnapCallback(request, reply) {
     logger.success(`🔐 [SNAP] Signature VALID (IP: ${clientIp})`);
   } else {
     logger.warn(`⚠️ [SNAP] Signature INVALID atau Public Key belum disetel (IP: ${clientIp}).`);
+  }
+
+  // Update status transaksi di database JSON menjadi PAID
+  const bodyTrxId = request.body?.trxId || request.body?.partnerReferenceNo || snapExternalId;
+  const bodyVaNo = request.body?.virtualAccountNo || request.body?.customerNo;
+  const bodyPartnerRef = request.body?.partnerReferenceNo || request.body?.referenceNo;
+
+  const updatedTx = updateTransactionStatus(
+    { trxId: bodyTrxId, virtualAccountNo: bodyVaNo, partnerReferenceNo: bodyPartnerRef },
+    "PAID",
+    { callbackData: request.body }
+  );
+
+  if (updatedTx) {
+    logger.success(`🎉 [DB] Status transaksi ${updatedTx.trxId || updatedTx.virtualAccountNo || updatedTx.id} berhasil diupdate ke PAID`);
   }
 
   await saveKey("lastCallbackReceived", {
@@ -110,6 +125,20 @@ async function handleCheckoutCallback(request, reply) {
     logger.success(`🔐 [Checkout] Signature VALID (IP: ${clientIp})`);
   } else {
     logger.warn(`⚠️ [Checkout] Signature INVALID (IP: ${clientIp}).`);
+  }
+
+  // Update status transaksi invoice di database JSON menjadi PAID
+  const bodyInvoiceId = request.body?.invoice_id || request.body?.invoiceId || request.body?.id;
+  const bodyRef = request.body?.reference || request.body?.order_id;
+
+  const updatedInvoiceTx = updateTransactionStatus(
+    { invoiceId: bodyInvoiceId, partnerReferenceNo: bodyRef },
+    "PAID",
+    { callbackData: request.body }
+  );
+
+  if (updatedInvoiceTx) {
+    logger.success(`🎉 [DB] Status Invoice ${updatedInvoiceTx.invoiceId || updatedInvoiceTx.id} berhasil diupdate ke PAID`);
   }
 
   await saveKey("lastCallbackReceived", {

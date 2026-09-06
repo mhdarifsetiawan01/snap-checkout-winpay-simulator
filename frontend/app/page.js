@@ -1,6 +1,7 @@
 import StatePanel          from '@/components/shared/StatePanel';
 import CallbackLog         from '@/components/shared/CallbackLog';
 import DashboardEnvSection from '@/components/dashboard/DashboardEnvSection';
+import TransactionHistory  from '@/components/shared/TransactionHistory';
 import { API_URL }         from '@/lib/api';
 
 async function getState() {
@@ -24,6 +25,7 @@ export default async function DashboardPage() {
       </div>
 
       <DashboardEnvSection />
+      <TransactionHistory defaultCategory="all" title="Riwayat 10 Transaksi Terakhir" />
       <StatePanel  initialState={state} />
       <CallbackLog initialCallback={state?.lastCallbackReceived} />
     </div>

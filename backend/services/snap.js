@@ -14,9 +14,8 @@ const httpsAgent = new https.Agent({ family: 4, keepAlive: false });
 /**
  * Generic request ke SNAP API
  */
-async function sendRequest(endpoint, payload, simulate = true) {
+async function sendRequest(endpoint, payload, simulate = true, httpMethod = "POST") {
   const url = `${CONFIG.SNAP_BASE_URL}${endpoint}`;
-  const httpMethod = "POST";
   const timestamp = generateTimestamp();
 
   const { signature, stringToSign } = generateSignature(httpMethod, endpoint, payload, timestamp);
@@ -37,6 +36,7 @@ async function sendRequest(endpoint, payload, simulate = true) {
 
   if (!simulate) {
     logger.info("=== SIMULATED REQUEST ===");
+    logger.debug("Method:", httpMethod);
     logger.debug("URL:", url);
     logger.debug("Headers:", headers);
     logger.debug("Body:", JSON.stringify(payload, null, 2));
@@ -47,8 +47,11 @@ async function sendRequest(endpoint, payload, simulate = true) {
 
   // eksekusi request real
   try {
-    logger.info(`📡 Sending request to: ${url}`);
-    const response = await axios.post(url, payload, {
+    logger.info(`📡 Sending ${httpMethod} request to: ${url}`);
+    const response = await axios({
+      method: httpMethod,
+      url,
+      data: payload,
       headers,
       timeout: 10000,
       httpAgent,
@@ -67,6 +70,7 @@ async function sendRequest(endpoint, payload, simulate = true) {
     throw new Error(
       JSON.stringify(
         {
+          method: httpMethod,
           endpoint,
           error: errorData,
           stringToSign,
@@ -175,6 +179,11 @@ async function createewallet(payload = {}, simulate = false) {
   return result;
 }
 
-module.exports = { createva, inquiryva, statusva, createqris, createewallet };
+async function deleteva(payload = {}, simulate = false) {
+  // Winpay SNAP requires POST method for /v1.0/transfer-va/delete-va
+  return await sendRequest("/v1.0/transfer-va/delete-va", payload, simulate, "POST");
+}
+
+module.exports = { createva, inquiryva, statusva, deleteva, createqris, createewallet };
 
 

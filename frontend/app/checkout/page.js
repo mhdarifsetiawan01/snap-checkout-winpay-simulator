@@ -4,6 +4,7 @@ import CreateInvoiceForm from '@/components/checkout/CreateInvoiceForm';
 import FindInvoicePanel  from '@/components/checkout/FindInvoicePanel';
 import EnvSwitcher       from '@/components/shared/EnvSwitcher';
 import CredentialInfo    from '@/components/shared/CredentialInfo';
+import TransactionHistory from '@/components/shared/TransactionHistory';
 import { useEnv }        from '@/lib/useEnv';
 
 export default function CheckoutPage() {
@@ -21,8 +22,6 @@ export default function CheckoutPage() {
 
       {/* Active Credential Info */}
       <CredentialInfo env={env} />
-
-
 
       <div className="two-col">
         {/* Create Invoice */}
@@ -55,6 +54,9 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
+
+      {/* Transaction History Section */}
+      <TransactionHistory defaultCategory="checkout" title="Riwayat Invoice Checkout Page" />
     </div>
   );
 }

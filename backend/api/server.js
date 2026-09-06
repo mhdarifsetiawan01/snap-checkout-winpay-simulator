@@ -124,6 +124,7 @@ async function buildServer() {
           createVA:     "POST /api/snap/va",
           inquiryVA:    "POST /api/snap/inquiry-va",
           statusVA:     "POST /api/snap/status-va",
+          deleteVA:     "POST /api/snap/delete-va | DELETE /api/snap/va",
           createQRIS:   "POST /api/snap/qris",
           createEwallet: "POST /api/snap/ewallet",
         },

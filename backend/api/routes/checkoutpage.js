@@ -4,7 +4,7 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"
 
 const checkoutService = require("../../services/checkoutpage");
 const { createInvoiceBody } = require("../../templates/checkoutpage/createInvoice");
-const { getKey } = require("../../helpers/storage");
+const { getKey, recordTransaction, updateTransactionStatus } = require("../../helpers/storage");
 
 function applyEnvOverride(envParam) {
   const allowed = ["development", "sandbox", "production", "prod"];
@@ -21,8 +21,9 @@ function applyEnvOverride(envParam) {
 async function checkoutPageRoutes(fastify) {
   // ─── Create Invoice ──────────────────────────────────────────────────────
   fastify.post("/checkout/invoice", async (request, reply) => {
+    const { price, productName, env } = request.body || {};
+    let payload = null;
     try {
-      const { price, productName, env } = request.body || {};
       applyEnvOverride(env || request.query.env);
 
       if (!price)       return reply.code(400).send({ error: "Field 'price' wajib diisi" });
@@ -32,14 +33,48 @@ async function checkoutPageRoutes(fastify) {
       process.env.PRICE        = String(price);
       process.env.PRODUCT_NAME = String(productName);
 
-      const payload = createInvoiceBody();
+      payload = createInvoiceBody();
       const result  = await checkoutService.createinvoice(payload, false);
 
       delete process.env.PRICE;
       delete process.env.PRODUCT_NAME;
 
+      const invoiceId = result?.invoiceId || result?.data?.id || getKey("lastInvoiceId");
+      const redirectUrl = result?.url || result?.redirectUrl || result?.data?.url || getKey("lastWebRedirectUrl");
+
+      recordTransaction("checkout", {
+        type: "INVOICE",
+        channel: "Checkout Page",
+        invoiceId: invoiceId,
+        partnerReferenceNo: payload.reference,
+        amount: price,
+        webRedirectUrl: redirectUrl,
+        status: "PENDING",
+        env: process.env.NODE_ENV,
+        rawResponse: result,
+      });
+
       return reply.send({ success: true, data: result });
     } catch (err) {
+      delete process.env.PRICE;
+      delete process.env.PRODUCT_NAME;
+
+      let errorMsg = err.message;
+      try {
+        const parsed = JSON.parse(err.message);
+        errorMsg = parsed.error?.message || parsed.error?.status || JSON.stringify(parsed.error);
+      } catch (_) {}
+
+      recordTransaction("checkout", {
+        type: "INVOICE",
+        channel: "Checkout Page",
+        partnerReferenceNo: payload?.reference || `ERR-${Date.now()}`,
+        amount: price || 0,
+        status: "FAILED",
+        errorMessage: errorMsg,
+        env: process.env.NODE_ENV,
+      });
+
       return reply.code(500).send({ success: false, error: err.message });
     }
   });
@@ -49,7 +84,7 @@ async function checkoutPageRoutes(fastify) {
     try {
       applyEnvOverride(request.query.env);
 
-      const invoiceId = getKey("lastInvoiceId");
+      const invoiceId = request.query.invoiceId || getKey("lastInvoiceId");
       if (!invoiceId) {
         return reply.code(404).send({
           success: false,
@@ -58,6 +93,17 @@ async function checkoutPageRoutes(fastify) {
       }
 
       const result = await checkoutService.findinvoice(invoiceId, false);
+
+      // Update status jika invoice sudah terbayar
+      const statusStr = String(result?.status || result?.data?.status || "").toUpperCase();
+      if (statusStr === "0000" || statusStr === "PAID" || statusStr === "SETTLED" || statusStr === "SUCCESS") {
+        updateTransactionStatus(
+          { invoiceId: invoiceId },
+          "PAID",
+          { rawStatusResponse: result }
+        );
+      }
+
       return reply.send({ success: true, invoiceId, data: result });
     } catch (err) {
       return reply.code(500).send({ success: false, error: err.message });
