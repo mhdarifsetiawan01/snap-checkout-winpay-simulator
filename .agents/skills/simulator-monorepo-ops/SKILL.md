@@ -51,13 +51,19 @@ Browser UI -> Next.js BFF Route (/app/api/*) -> Fastify API (http://localhost:30
 
 ---
 
-## 4. Multi-Cloud Deployment Guide
-
-- **Backend (Fly.io)**:
-  - Configuration: `fly.toml`
-  - Dockerfile: `backend/Dockerfile`
-  - Deploy command: `fly deploy`
-
-- **Frontend (Vercel)**:
-  - Configuration: `vercel.json` (points to `frontend/`)
-  - Set Environment Variable in Vercel Dashboard: `API_URL=https://<your-fly-api-app>.fly.dev`
+## 4. Multi-Cloud Deployment & Secret Protection Guide
+ 
+ - **Backend (Fly.io)**:
+   - Configuration: `fly.toml`
+   - Dockerfile: `backend/Dockerfile`
+   - Deploy command: `fly deploy`
+   - **Secret Protection**:
+     - Never run `fly secrets import` to prevent local `.env` leaks.
+     - Use `.dockerignore` and `backend/.dockerignore` to filter `.env*` and `*.pem`.
+     - Secrets are masked on Fly.io; active credentials are provided dynamically from Frontend UI.
+ 
+ - **Frontend (Vercel)**:
+   - Configuration: `vercel.json` (Root Directory: `frontend`)
+   - Set Environment Variables in Vercel Dashboard:
+     - `API_URL=https://<your-fly-api-app>.fly.dev`
+     - `NEXT_PUBLIC_DEFAULT_ENV=development`

@@ -252,6 +252,13 @@ Project ini menggunakan `lowdb@^1` (CommonJS). `lowdb@^2+` tidak kompatibel (ESM
 - **Port Collision Prevention**: Port `3033` (Fastify API) dan `3000` (Next.js Frontend) adalah hak kontrol eksklusif pengguna terminal. Membiarkan daemon background aktif menyebabkan error `EADDRINUSE: address already in use 0.0.0.0:3033` dan mengganggu alur pengujian user.
 - **SOP Step**: Sebelum menyatakan tugas selesai atau menunggu input user, jalankan `manage_task(Action='list')` dan pastikan 0 background test server tersisa.
 
+### 7.7 Deployment & Secret Protection SOP (MANDATORY)
+- **STRICT PROHIBITION ON EXPOSING REAL LOCAL `.env` TO CLOUD / DOCKER / GIT**:
+  1. **Strict Docker Context Filtering**: Pastikan `.dockerignore` di root dan `backend/.dockerignore` selalu menyaring file `.env*`, `*.pem`, `*.key`, dan `db.json`. Dockerfile tidak boleh menyalin file `.env` ke image.
+  2. **Prohibition of `fly secrets import`**: Dilarang menjalankan `fly secrets import` yang membaca file `.env` lokal secara utuh ke cloud. Variabel rahasia di Fly.io harus disamarkan (*masked*) atau di-set eksplisit.
+  3. **Custom Credential Overrides via UI**: Kredensial merchant aktif diinput langsung melalui UI Frontend (*Custom Partner ID* & *Custom Checkout Key*) agar backend cloud tetap menggunakan dummy/masked credentials yang aman.
+  4. **Git Tracking Guard**: Selalu pastikan `git status` dan `git ls-files` tidak pernah menyertakan file kredensial sebelum commit dan push ke remote repository (`main`, `master`, `dev`).
+
 ---
 
 ## 🔄 8. Alur Kerja Implementasi (SOP untuk Agent)
