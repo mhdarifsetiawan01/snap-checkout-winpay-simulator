@@ -58,10 +58,18 @@ async function stateRoutes(fastify) {
         ? process.env.CHECKOUT_CLIENT_KEY_SANDBOX
         : process.env.CHECKOUT_CLIENT_KEY_DEV;
 
+    const enableIpWhitelist = process.env.ENABLE_IP_WHITELIST === "true" || process.env.ENABLE_IP_WHITELIST === "1";
+    const allowedIps = (process.env.ALLOWED_IPS || "").split(",").map(s => s.trim()).filter(Boolean);
+
     return reply.send({
       success: true,
       data: {
         env,
+        ipWhitelist: {
+          enabled: enableIpWhitelist,
+          allowedIpsCount: allowedIps.length,
+          allowedIps: enableIpWhitelist ? allowedIps : [],
+        },
         snap: {
           baseUrl: snapBaseUrl || "—",
           partnerId: snapPartnerId || "—",

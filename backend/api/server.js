@@ -55,14 +55,67 @@ async function buildServer() {
     ],
   });
 
+  // ─── Global Request Logger & IP Whitelist Guard ─────────────────────────
+  fastify.addHook("onRequest", async (request, reply) => {
+    const headers = request.headers || {};
+    let ip =
+      headers["cf-connecting-ip"] ||
+      (headers["x-forwarded-for"] ? headers["x-forwarded-for"].split(",")[0].trim() : null) ||
+      headers["x-real-ip"] ||
+      request.ip ||
+      request.raw?.socket?.remoteAddress ||
+      "127.0.0.1";
+
+    if (ip && ip.startsWith("::ffff:")) {
+      ip = ip.replace("::ffff:", "");
+    }
+
+    request.clientIp = ip;
+    const country = headers["cf-ipcountry"] ? ` [${headers["cf-ipcountry"]}]` : "";
+    const isWebhook = request.url.includes("callback") || request.url.startsWith("/v1.0/");
+
+    if (isWebhook) {
+      logger.info(`📥 [WEBHOOK HIT] ${request.method} ${request.url} | 🌐 Client IP: ${ip}${country}`);
+    } else {
+      logger.info(`🌐 [HTTP ${request.method}] ${request.url} | 🌐 Client IP: ${ip}${country}`);
+    }
+
+    // Bypass check untuk OPTIONS (CORS preflight), Health Check, dan Webhook Callbacks
+    // Webhook Callback (SNAP & Checkout) sudah diverifikasi secara kriptografis menggunakan RSA Public Key & HMAC
+    if (request.method === "OPTIONS") return;
+    const urlPath = (request.url || "").split("?")[0];
+    if (urlPath === "/" || urlPath === "/health" || urlPath === "/api/health") return;
+    if (isWebhook) return;
+
+    // Enforce IP Whitelist jika diaktifkan di .env untuk endpoint simulator lainnya
+    if (CONFIG.ENABLE_IP_WHITELIST) {
+      const allowedIps = CONFIG.ALLOWED_IPS;
+      const isAllowed = allowedIps.includes(ip);
+
+      if (!isAllowed) {
+        logger.warn(`⛔ [IP BLOCKED] IP ${ip} tidak diizinkan mengakses ${request.method} ${request.url}`);
+        return reply.status(403).send({
+          responseCode: "4030000",
+          responseMessage: `IP ${ip} tidak diizinkan, silahkan hubungi admin.`,
+          clientIp: ip,
+        });
+      }
+    }
+  });
 
   // ─── Health Check ─────────────────────────────────────────────────────────
+
   fastify.get("/api/health", async (request, reply) => {
     return reply.send({
       status: "ONLINE",
       environment: CONFIG.env,
       port: API_PORT,
       timestamp: new Date().toISOString(),
+      ipWhitelist: {
+        enabled: CONFIG.ENABLE_IP_WHITELIST,
+        allowedIpsCount: CONFIG.ALLOWED_IPS.length,
+        allowedIps: CONFIG.ENABLE_IP_WHITELIST ? CONFIG.ALLOWED_IPS : [],
+      },
       endpoints: {
         snap: {
           createVA:     "POST /api/snap/va",
@@ -110,15 +163,16 @@ async function start() {
 
     logger.info("====================================================");
     logger.info("🚀 Winpay Simulator API Server (Fastify) Aktif");
-    logger.info(`📌 Port        : ${API_PORT}`);
-    logger.info(`📌 Environment : ${CONFIG.env}`);
-    logger.info(`📌 Health      : http://localhost:${API_PORT}/api/health`);
-    logger.info(`📌 SNAP VA     : POST http://localhost:${API_PORT}/api/snap/va`);
-    logger.info(`📌 SNAP QRIS   : POST http://localhost:${API_PORT}/api/snap/qris`);
-    logger.info(`📌 eWallet     : POST http://localhost:${API_PORT}/api/snap/ewallet`);
-    logger.info(`📌 Invoice     : POST http://localhost:${API_PORT}/api/checkout/invoice`);
-    logger.info(`📌 Callback    : POST http://localhost:${API_PORT}/api/callback/snap`);
-    logger.info(`📌 State       : GET  http://localhost:${API_PORT}/api/state`);
+    logger.info(`📌 Port         : ${API_PORT}`);
+    logger.info(`📌 Environment  : ${CONFIG.env}`);
+    logger.info(`📌 IP Whitelist : ${CONFIG.ENABLE_IP_WHITELIST ? `AKTIF (${CONFIG.ALLOWED_IPS.join(", ")})` : "NONAKTIF (Semua IP diizinkan)"}`);
+    logger.info(`📌 Health       : http://localhost:${API_PORT}/api/health`);
+    logger.info(`📌 SNAP VA      : POST http://localhost:${API_PORT}/api/snap/va`);
+    logger.info(`📌 SNAP QRIS    : POST http://localhost:${API_PORT}/api/snap/qris`);
+    logger.info(`📌 eWallet      : POST http://localhost:${API_PORT}/api/snap/ewallet`);
+    logger.info(`📌 Invoice      : POST http://localhost:${API_PORT}/api/checkout/invoice`);
+    logger.info(`📌 Callback     : POST http://localhost:${API_PORT}/api/callback/snap`);
+    logger.info(`📌 State        : GET  http://localhost:${API_PORT}/api/state`);
     logger.info("====================================================");
   } catch (err) {
     logger.error("❌ Gagal menjalankan API server:", err.message);

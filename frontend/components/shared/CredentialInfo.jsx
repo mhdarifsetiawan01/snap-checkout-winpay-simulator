@@ -97,6 +97,21 @@ export default function CredentialInfo({ env }) {
               CUSTOM PARTNER-ID ACTIVE
             </span>
           )}
+          {config.ipWhitelist && (
+            <span
+              style={{
+                fontSize: '10px',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                background: config.ipWhitelist.enabled ? 'rgba(34, 197, 94, 0.15)' : 'rgba(148, 163, 184, 0.15)',
+                color: config.ipWhitelist.enabled ? '#4ade80' : '#94a3b8',
+                border: `1px solid ${config.ipWhitelist.enabled ? 'rgba(34, 197, 94, 0.3)' : 'rgba(148, 163, 184, 0.3)'}`,
+                fontWeight: 600,
+              }}
+            >
+              {config.ipWhitelist.enabled ? `🛡️ WHITELIST ACTIVE (${config.ipWhitelist.allowedIpsCount} IP)` : '🌐 WHITELIST OFF'}
+            </span>
+          )}
         </div>
         <span
           className={`env-badge ${env === 'production' ? 'production' : env === 'sandbox' ? 'sandbox' : 'dev'}`}

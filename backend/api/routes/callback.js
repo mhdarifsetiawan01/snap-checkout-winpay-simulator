@@ -17,9 +17,17 @@ async function handleSnapCallback(request, reply) {
   const snapPartnerId  = headers["x-partner-id"];
   const snapExternalId = headers["x-external-id"];
   const rawBody        = JSON.stringify(request.body);
-  const pathname       = (request.raw.url || request.url).split("?")[0];
+  let clientIp =
+    request.clientIp ||
+    headers["cf-connecting-ip"] ||
+    (headers["x-forwarded-for"] ? headers["x-forwarded-for"].split(",")[0].trim() : null) ||
+    headers["x-real-ip"] ||
+    request.ip ||
+    "127.0.0.1";
+  if (clientIp && clientIp.startsWith("::ffff:")) clientIp = clientIp.replace("::ffff:", "");
+  const country = headers["cf-ipcountry"] ? ` [${headers["cf-ipcountry"]}]` : "";
 
-  logger.info(`📥 [SNAP] Callback masuk: POST ${pathname}`);
+  logger.info(`📥 [SNAP] Callback masuk: POST ${pathname} | 🌐 IP: ${clientIp}${country}`);
   logger.debug("Headers:", JSON.stringify(headers, null, 2));
   logger.debug("Body:", JSON.stringify(request.body, null, 2));
 
@@ -33,14 +41,15 @@ async function handleSnapCallback(request, reply) {
   });
 
   if (isVerified) {
-    logger.success("🔐 [SNAP] Signature VALID");
+    logger.success(`🔐 [SNAP] Signature VALID (IP: ${clientIp})`);
   } else {
-    logger.warn("⚠️ [SNAP] Signature INVALID atau Public Key belum disetel.");
+    logger.warn(`⚠️ [SNAP] Signature INVALID atau Public Key belum disetel (IP: ${clientIp}).`);
   }
 
   await saveKey("lastCallbackReceived", {
     type: "SNAP",
     path: pathname,
+    clientIp,
     timestamp: new Date().toISOString(),
     headers: {
       "x-timestamp":  snapTimestamp,
@@ -76,8 +85,17 @@ async function handleCheckoutCallback(request, reply) {
   const checkoutSignature  = headers["x-winpay-signature"];
   const checkoutTimestamp  = headers["x-winpay-timestamp"];
   const pathname           = (request.raw.url || request.url).split("?")[0];
+  let clientIp =
+    request.clientIp ||
+    headers["cf-connecting-ip"] ||
+    (headers["x-forwarded-for"] ? headers["x-forwarded-for"].split(",")[0].trim() : null) ||
+    headers["x-real-ip"] ||
+    request.ip ||
+    "127.0.0.1";
+  if (clientIp && clientIp.startsWith("::ffff:")) clientIp = clientIp.replace("::ffff:", "");
+  const country = headers["cf-ipcountry"] ? ` [${headers["cf-ipcountry"]}]` : "";
 
-  logger.info(`📥 [Checkout] Callback masuk: POST ${pathname}`);
+  logger.info(`📥 [Checkout] Callback masuk: POST ${pathname} | 🌐 IP: ${clientIp}${country}`);
   logger.debug("Headers:", JSON.stringify(headers, null, 2));
   logger.debug("Body:", JSON.stringify(request.body, null, 2));
 
@@ -88,14 +106,15 @@ async function handleCheckoutCallback(request, reply) {
   });
 
   if (isVerified) {
-    logger.success("🔐 [Checkout] Signature VALID");
+    logger.success(`🔐 [Checkout] Signature VALID (IP: ${clientIp})`);
   } else {
-    logger.warn("⚠️ [Checkout] Signature INVALID.");
+    logger.warn(`⚠️ [Checkout] Signature INVALID (IP: ${clientIp}).`);
   }
 
   await saveKey("lastCallbackReceived", {
     type: "CHECKOUT",
     path: pathname,
+    clientIp,
     timestamp: new Date().toISOString(),
     headers: {
       "x-winpay-timestamp": checkoutTimestamp,
@@ -110,6 +129,7 @@ async function handleCheckoutCallback(request, reply) {
     message: "Success",
   });
 }
+
 
 /**
  * Routes Webhook / Callback Receiver

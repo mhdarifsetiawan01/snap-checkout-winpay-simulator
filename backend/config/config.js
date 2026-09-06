@@ -79,6 +79,17 @@ const CONFIG = {
         ? process.env.CHECKOUT_SECRET_KEY_SANDBOX
         : process.env.CHECKOUT_SECRET_KEY_DEV;
   },
+  // IP Whitelist
+  get ENABLE_IP_WHITELIST() {
+    return process.env.ENABLE_IP_WHITELIST === "true" || process.env.ENABLE_IP_WHITELIST === "1";
+  },
+  get ALLOWED_IPS() {
+    const raw = process.env.ALLOWED_IPS || "";
+    return raw
+      .split(",")
+      .map((ip) => ip.trim())
+      .filter(Boolean);
+  },
 };
 
 module.exports = CONFIG;

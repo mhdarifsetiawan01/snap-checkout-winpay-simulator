@@ -64,9 +64,20 @@ const server = http.createServer((req, res) => {
       const checkoutSignature = headers["x-winpay-signature"];
       const checkoutTimestamp = headers["x-winpay-timestamp"];
 
-      logger.info(`📥 Incoming Callback [${method}] ${pathname}`);
+      const clientIp =
+        headers["cf-connecting-ip"] ||
+        (headers["x-forwarded-for"] ? headers["x-forwarded-for"].split(",")[0].trim() : null) ||
+        headers["x-real-ip"] ||
+        req.socket.remoteAddress ||
+        "unknown";
+      const cfCountry = headers["cf-ipcountry"] ? ` [${headers["cf-ipcountry"]}]` : "";
+
+      logger.info(`📥 Incoming Callback [${method}] ${pathname} | 🌐 Client IP: ${clientIp}${cfCountry}`);
       logger.debug("Headers:", JSON.stringify(headers, null, 2));
       logger.debug("Body:", JSON.stringify(body, null, 2));
+
+      // Catatan: Callback/Webhook diverifikasi secara kriptografis menggunakan RSA Public Key / HMAC,
+      // sehingga tidak diblokir oleh IP Whitelist agar tidak terjadi kegagalan penerimaan notifikasi dari Winpay.
 
       // 1. SNAP API CALLBACK HANDLER
       if (snapSignature || pathname.includes("/snap") || pathname.includes("/v1.0")) {
@@ -80,9 +91,9 @@ const server = http.createServer((req, res) => {
         });
 
         if (isVerified) {
-          logger.success("🔐 [SNAP] Signature VALID (Verified by Winpay Public Key)");
+          logger.success(`🔐 [SNAP] Signature VALID (Verified by Winpay Public Key) | IP: ${clientIp}`);
         } else {
-          logger.warn("⚠️ [SNAP] Signature INVALID atau Public Key belum disetel.");
+          logger.warn(`⚠️ [SNAP] Signature INVALID atau Public Key belum disetel | IP: ${clientIp}`);
         }
 
         // Simpan callback ke db.json
@@ -90,6 +101,7 @@ const server = http.createServer((req, res) => {
           type: "SNAP",
           path: pathname,
           timestamp: new Date().toISOString(),
+          clientIp: clientIp,
           headers: {
             "x-timestamp": snapTimestamp,
             "x-signature": snapSignature,
@@ -119,9 +131,9 @@ const server = http.createServer((req, res) => {
         });
 
         if (isVerified) {
-          logger.success("🔐 [Checkout] Signature VALID (Verified with Secret Key)");
+          logger.success(`🔐 [Checkout] Signature VALID (Verified with Secret Key) | IP: ${clientIp}`);
         } else {
-          logger.warn("⚠️ [Checkout] Signature INVALID.");
+          logger.warn(`⚠️ [Checkout] Signature INVALID | IP: ${clientIp}`);
         }
 
         // Simpan callback ke db.json
@@ -129,6 +141,7 @@ const server = http.createServer((req, res) => {
           type: "CHECKOUT",
           path: pathname,
           timestamp: new Date().toISOString(),
+          clientIp: clientIp,
           headers: {
             "x-winpay-timestamp": checkoutTimestamp,
             "x-winpay-signature": checkoutSignature,
@@ -151,6 +164,7 @@ const server = http.createServer((req, res) => {
         type: "GENERIC",
         path: pathname,
         timestamp: new Date().toISOString(),
+        clientIp: clientIp,
         headers: headers,
         body: body,
       });

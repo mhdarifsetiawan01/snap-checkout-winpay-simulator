@@ -35,13 +35,31 @@ export default function CallbackLog({ initialCallback }) {
       ) : (
         <div>
           {/* Meta row */}
-          <div className="flex items-center gap-3 mb-4">
+          <div className="flex items-center gap-3 mb-4" style={{ flexWrap: 'wrap' }}>
             <span className={`callback-type-badge ${(cb.type || '').toLowerCase()}`}>
               {cb.type || 'UNKNOWN'}
             </span>
             <span className={cb.isSignatureValid ? 'sig-valid' : 'sig-invalid'}>
               {cb.isSignatureValid ? '✓ Signature Valid' : '⚠ Signature Invalid'}
             </span>
+            {cb.clientIp && (
+              <span
+                className="text-mono text-xs"
+                style={{
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  color: '#38bdf8',
+                  padding: '3px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(56, 189, 248, 0.25)',
+                  fontWeight: 500,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                🌐 IP: {cb.clientIp}
+              </span>
+            )}
             <span className="text-xs text-muted">
               {cb.timestamp ? new Date(cb.timestamp).toLocaleString('id-ID') : ''}
             </span>
@@ -51,6 +69,7 @@ export default function CallbackLog({ initialCallback }) {
           <div className="text-xs text-muted mb-4">
             Path: <span className="font-mono">{cb.path}</span>
           </div>
+
 
           {/* Body */}
           <div className="card-title" style={{ marginBottom: 8 }}>Payload</div>
