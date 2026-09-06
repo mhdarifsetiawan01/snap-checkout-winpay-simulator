@@ -2,15 +2,15 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install dependencies
-COPY package*.json ./
+COPY backend/package*.json ./
 RUN npm ci --omit=dev
 
 # Copy hanya file yang dibutuhkan API (bukan frontend/)
-COPY config/ ./config/
-COPY helpers/ ./helpers/
-COPY services/ ./services/
-COPY templates/ ./templates/
-COPY api/ ./api/
+COPY backend/config/ ./config/
+COPY backend/helpers/ ./helpers/
+COPY backend/services/ ./services/
+COPY backend/templates/ ./templates/
+COPY backend/api/ ./api/
 
 # Port default Fastify
 EXPOSE 3001
