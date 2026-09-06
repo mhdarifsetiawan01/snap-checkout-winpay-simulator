@@ -2,11 +2,11 @@
 import { useState } from 'react';
 import CreateInvoiceForm from '@/components/checkout/CreateInvoiceForm';
 import FindInvoicePanel  from '@/components/checkout/FindInvoicePanel';
-
-const ENV_OPTIONS = ['development', 'sandbox', 'production'];
+import EnvSwitcher       from '@/components/shared/EnvSwitcher';
+import { useEnv }        from '@/lib/useEnv';
 
 export default function CheckoutPage() {
-  const [env, setEnv] = useState('development');
+  const [env, setEnv] = useEnv('development');
 
   return (
     <div>
@@ -15,20 +15,9 @@ export default function CheckoutPage() {
         <p>Buat dan cek Invoice via Winpay Checkout Page API.</p>
       </div>
 
-      {/* Environment Switcher */}
-      <div className="flex items-center gap-3 mb-6" style={{ marginBottom: 24 }}>
-        <span className="text-sm text-muted">Environment:</span>
-        {ENV_OPTIONS.map(e => (
-          <button
-            key={e}
-            onClick={() => setEnv(e)}
-            className={`env-badge ${e === 'production' ? 'production' : e === 'sandbox' ? 'sandbox' : 'dev'}`}
-            style={{ opacity: env === e ? 1 : 0.45 }}
-          >
-            {e}
-          </button>
-        ))}
-      </div>
+      {/* Persistent Environment Switcher */}
+      <EnvSwitcher env={env} setEnv={setEnv} />
+
 
       <div className="two-col">
         {/* Create Invoice */}

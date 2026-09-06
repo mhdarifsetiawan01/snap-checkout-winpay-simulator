@@ -4,6 +4,8 @@ import CreateVAForm      from '@/components/snap/CreateVAForm';
 import CreateQRISForm    from '@/components/snap/CreateQRISForm';
 import CreateEwalletForm from '@/components/snap/CreateEwalletForm';
 import InquiryPanel      from '@/components/snap/InquiryPanel';
+import EnvSwitcher       from '@/components/shared/EnvSwitcher';
+import { useEnv }        from '@/lib/useEnv';
 
 const TABS = [
   { id: 'va',       label: '🏦 Virtual Account' },
@@ -12,11 +14,9 @@ const TABS = [
   { id: 'inquiry',  label: '🔍 Inquiry & Status' },
 ];
 
-const ENV_OPTIONS = ['development', 'sandbox', 'production'];
-
 export default function SnapPage() {
   const [activeTab, setActiveTab] = useState('va');
-  const [env, setEnv] = useState('development');
+  const [env, setEnv] = useEnv('development');
 
   return (
     <div>
@@ -25,20 +25,9 @@ export default function SnapPage() {
         <p>Simulate Virtual Account, QRIS, dan eWallet payment via SNAP BI standard.</p>
       </div>
 
-      {/* Environment Switcher */}
-      <div className="flex items-center gap-3 mb-6" style={{ marginBottom: 24 }}>
-        <span className="text-sm text-muted">Environment:</span>
-        {ENV_OPTIONS.map(e => (
-          <button
-            key={e}
-            onClick={() => setEnv(e)}
-            className={`env-badge ${e === 'production' ? 'production' : e === 'sandbox' ? 'sandbox' : 'dev'}`}
-            style={{ opacity: env === e ? 1 : 0.45 }}
-          >
-            {e}
-          </button>
-        ))}
-      </div>
+      {/* Persistent Environment Switcher */}
+      <EnvSwitcher env={env} setEnv={setEnv} />
+
 
       {/* Tabs */}
       <div className="tabs">
