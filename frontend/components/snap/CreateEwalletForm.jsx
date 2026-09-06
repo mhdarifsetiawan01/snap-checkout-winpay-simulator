@@ -39,7 +39,23 @@ export default function CreateEwalletForm({ env }) {
 
       setIsError(!r.ok || !data.success);
       setResult(data);
-      // Tampilkan redirect URL jika ada
+
+      if (data.success && data.data) {
+        const { saveLocalTransaction } = await import('@/lib/txStorage');
+        saveLocalTransaction({
+          type: 'EWALLET',
+          category: 'ewallet',
+          channel,
+          trxId: data.data?.trxId || data.data?.partnerReferenceNo,
+          partnerReferenceNo: data.data?.partnerReferenceNo || data.data?.trxId,
+          amount: Number(amount) || 0,
+          status: 'PENDING',
+          env: env || 'development',
+          webRedirectUrl: data.data?.webRedirectUrl || data.data?.redirectUrl,
+          appRedirectUrl: data.data?.appRedirectUrl,
+          rawResponse: data.data,
+        });
+      }
     } catch (err) {
       setIsError(true);
       setResult({ error: err.message });

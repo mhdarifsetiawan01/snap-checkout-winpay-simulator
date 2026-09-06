@@ -1,6 +1,13 @@
 'use client';
 import { useState, useEffect, useCallback } from 'react';
 import { useCustomPartnerId, useCustomCheckoutCredentials } from '@/lib/useEnv';
+import {
+  getLocalTransactions,
+  saveLocalTransaction,
+  updateLocalTransactionStatus,
+  deleteLocalTransaction,
+  mergeTransactions,
+} from '@/lib/txStorage';
 
 const CATEGORIES = [
   { id: 'all',      label: 'Semua Transaksi', icon: '◈' },
@@ -26,23 +33,48 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
   const fetchTransactions = useCallback(async () => {
     setLoading(true);
     try {
+      // 1. Ambil data lokal terlebih dahulu untuk instan display
+      const localList = getLocalTransactions(activeTab);
+      if (localList.length > 0) {
+        setTransactions(localList);
+      }
+
+      // 2. Fetch data dari server backend
       const res = await fetch(`/api/transactions?category=${activeTab}&limit=10&_t=${Date.now()}`, {
         cache: 'no-store',
       });
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
-        setTransactions(json.data);
+        // Simpan setiap transaksi dari server ke local storage
+        json.data.forEach((tx) => saveLocalTransaction(tx));
+        const merged = mergeTransactions(json.data, getLocalTransactions(activeTab));
+        setTransactions(merged.slice(0, 10));
+      } else {
+        setTransactions(getLocalTransactions(activeTab));
       }
     } catch (err) {
-      console.error('Failed to load transactions:', err);
+      console.error('Failed to load transactions from server, fallback to local:', err);
+      setTransactions(getLocalTransactions(activeTab));
     } finally {
       setLoading(false);
     }
   }, [activeTab]);
 
   useEffect(() => {
+    // Tampilkan data lokal seketika
+    const local = getLocalTransactions(activeTab);
+    if (local.length > 0) {
+      setTransactions(local);
+    }
     fetchTransactions();
-  }, [fetchTransactions]);
+
+    const handleUpdate = () => {
+      setTransactions(getLocalTransactions(activeTab));
+    };
+
+    window.addEventListener('winpay-transactions-updated', handleUpdate);
+    return () => window.removeEventListener('winpay-transactions-updated', handleUpdate);
+  }, [fetchTransactions, activeTab]);
 
   const handleCheckStatus = async (tx) => {
     setCheckingId(tx.id);
@@ -69,11 +101,11 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
       });
       const json = await res.json();
       if (json.success) {
+        updateLocalTransactionStatus({ id: tx.id, trxId: tx.trxId, virtualAccountNo: tx.virtualAccountNo, invoiceId: tx.invoiceId }, json.status);
         setFeedback({
           type: 'success',
           msg: `Status transaksi ${tx.trxId || tx.virtualAccountNo || tx.id} berhasil diperbarui: ${json.status}`,
         });
-        // Refresh local list
         fetchTransactions();
       } else {
         setFeedback({
@@ -163,6 +195,7 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
       });
       const json = await res.json();
       if (json.success && (json.data?.responseCode === '2003100' || json.data?.responseCode === '200' || json.data?.responseMessage?.toLowerCase()?.includes('success'))) {
+        deleteLocalTransaction(tx.id || tx.trxId || tx.virtualAccountNo);
         setFeedback({
           type: 'success',
           msg: `Virtual Account ${tx.virtualAccountNo || tx.trxId} berhasil dihapus / dibatalkan.`,

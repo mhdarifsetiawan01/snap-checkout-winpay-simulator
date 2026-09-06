@@ -29,6 +29,22 @@ export default function CreateQRISForm({ env }) {
 
       setIsError(!r.ok || !data.success);
       setResult(data);
+
+      if (data.success && data.data) {
+        const { saveLocalTransaction } = await import('@/lib/txStorage');
+        saveLocalTransaction({
+          type: 'QRIS',
+          category: 'qris',
+          channel: 'QRIS',
+          trxId: data.data?.trxId || data.data?.partnerReferenceNo,
+          partnerReferenceNo: data.data?.partnerReferenceNo || data.data?.trxId,
+          amount: Number(amount) || 0,
+          status: 'PENDING',
+          env: env || 'development',
+          qrContent: data.data?.qrContent || data.data?.qrCode,
+          rawResponse: data.data,
+        });
+      }
     } catch (err) {
       setIsError(true);
       setResult({ error: err.message });

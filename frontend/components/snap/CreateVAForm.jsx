@@ -33,6 +33,24 @@ export default function CreateVAForm({ env }) {
 
       setIsError(!r.ok || !data.success);
       setResult(data);
+
+      if (data.success && data.data) {
+        const vaData = data.data?.virtualAccountData || {};
+        const { saveLocalTransaction } = await import('@/lib/txStorage');
+        saveLocalTransaction({
+          type: 'VA',
+          category: 'va',
+          channel,
+          trxId: data.data?.trxId || vaData.additionalInfo?.trxId,
+          contractId: vaData.additionalInfo?.contractId,
+          partnerReferenceNo: data.data?.partnerReferenceNo || vaData.partnerServiceId,
+          virtualAccountNo: vaData.virtualAccountNo || vaData.customerNo,
+          amount: Number(amount) || 0,
+          status: 'PENDING',
+          env: env || 'development',
+          rawResponse: data.data,
+        });
+      }
     } catch (err) {
       setIsError(true);
       setResult({ error: err.message });

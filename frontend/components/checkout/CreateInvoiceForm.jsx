@@ -31,6 +31,24 @@ export default function CreateInvoiceForm({ env }) {
       const data = await r.json();
       setIsError(!r.ok || !data.success);
       setResult(data);
+
+      if (data.success && data.data) {
+        const responseData = data.data?.responseData || data.data?.data || data.data || {};
+        const { saveLocalTransaction } = await import('@/lib/txStorage');
+        saveLocalTransaction({
+          type: 'INVOICE',
+          category: 'checkout',
+          channel: 'Checkout Page',
+          invoiceId: responseData.id || responseData.invoiceId || data.data?.invoiceId,
+          partnerReferenceNo: responseData.reference || `INV-${Date.now()}`,
+          amount: Number(price) || 0,
+          status: 'PENDING',
+          interval: Number(expiredMinutes) || 5,
+          env: env || 'development',
+          webRedirectUrl: responseData.redirect_url || responseData.redirectUrl || responseData.url,
+          rawResponse: data.data,
+        });
+      }
     } catch (err) {
       setIsError(true);
       setResult({ error: err.message });
