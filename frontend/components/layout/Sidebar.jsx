@@ -14,17 +14,19 @@ export default function Sidebar() {
   const [apiOnline, setApiOnline] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
     const check = async () => {
       try {
         const r = await fetch('/api/health', { cache: 'no-store' });
-        setApiOnline(r.ok);
+        if (isMounted) setApiOnline(r.ok);
       } catch {
-        setApiOnline(false);
+        if (isMounted) setApiOnline(false);
       }
     };
     check();
-    const t = setInterval(check, 60000); // Check setiap 1 menit
-    return () => clearInterval(t);
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
