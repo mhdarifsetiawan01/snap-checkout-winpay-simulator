@@ -23,7 +23,7 @@ export default function Sidebar() {
       }
     };
     check();
-    const t = setInterval(check, 15000);
+    const t = setInterval(check, 60000); // Check setiap 1 menit
     return () => clearInterval(t);
   }, []);
 

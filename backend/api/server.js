@@ -72,19 +72,22 @@ async function buildServer() {
 
     request.clientIp = ip;
     const country = headers["cf-ipcountry"] ? ` [${headers["cf-ipcountry"]}]` : "";
+    const urlPath = (request.url || "").split("?")[0];
     const isWebhook = request.url.includes("callback") || request.url.startsWith("/v1.0/");
+    const isHealthCheck = urlPath === "/" || urlPath === "/health" || urlPath === "/api/health";
 
     if (isWebhook) {
       logger.info(`📥 [WEBHOOK HIT] ${request.method} ${request.url} | 🌐 Client IP: ${ip}${country}`);
-    } else {
+    } else if (!isHealthCheck) {
       logger.info(`🌐 [HTTP ${request.method}] ${request.url} | 🌐 Client IP: ${ip}${country}`);
+    } else {
+      logger.debug(`🌐 [HEALTH CHECK] ${request.method} ${request.url} | 🌐 Client IP: ${ip}${country}`);
     }
 
     // Bypass check untuk OPTIONS (CORS preflight), Health Check, dan Webhook Callbacks
     // Webhook Callback (SNAP & Checkout) sudah diverifikasi secara kriptografis menggunakan RSA Public Key & HMAC
     if (request.method === "OPTIONS") return;
-    const urlPath = (request.url || "").split("?")[0];
-    if (urlPath === "/" || urlPath === "/health" || urlPath === "/api/health") return;
+    if (isHealthCheck) return;
     if (isWebhook) return;
 
     // Enforce IP Whitelist jika diaktifkan di .env untuk endpoint simulator lainnya
