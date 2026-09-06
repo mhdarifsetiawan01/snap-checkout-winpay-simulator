@@ -105,25 +105,8 @@ export default function ReportVaPage() {
     }
   }, [env, fromDate, toDate, pageSize, pageNumber, partnerRef, customPartnerId]);
 
-  // Initial load & automatic reload whenever page is visited / focused
-  useEffect(() => {
-    handleFetchReport();
-
-    const onFocus = () => {
-      handleFetchReport();
-    };
-
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        handleFetchReport();
-      }
-    });
-
-    return () => {
-      window.removeEventListener('focus', onFocus);
-    };
-  }, [handleFetchReport]);
+  // Auto-fetch dinonaktifkan agar tidak otomatis reload saat halaman dibuka atau browser di-minimize.
+  // Data laporan diambil saat pengguna menekan tombol "🔍 Tampilkan Laporan".
 
   const listItems = Array.isArray(resultData?.detailData) ? resultData.detailData : [];
   const totalAmount = listItems.reduce((acc, item) => {

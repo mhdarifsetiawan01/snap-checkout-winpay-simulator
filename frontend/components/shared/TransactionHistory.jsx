@@ -42,21 +42,6 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
 
   useEffect(() => {
     fetchTransactions();
-
-    const onFocus = () => {
-      fetchTransactions();
-    };
-
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        fetchTransactions();
-      }
-    });
-
-    return () => {
-      window.removeEventListener('focus', onFocus);
-    };
   }, [fetchTransactions]);
 
   const handleCheckStatus = async (tx) => {
