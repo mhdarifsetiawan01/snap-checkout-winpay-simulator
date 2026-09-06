@@ -6,10 +6,14 @@ Alat simulator berbasis Node.js CLI untuk mendokumentasikan, menguji, dan mensim
 
 ## 📌 Fitur Utama
 
+- 💻 **Modern Web Dashboard (Next.js)**: Antarmuka UI modern berbasis Next.js (App Router) dengan tema Glassmorphism Dark Mode untuk mensimulasikan Create VA, QRIS, eWallet, Create Invoice, Find Invoice, dan live callback inspector.
+- 🌐 **Fastify REST API Engine**: Endpoint backend REST API modular (`/api/snap/*`, `/api/checkout/*`, `/api/callback/*`, `/api/state`) dengan performa tinggi untuk integrasi headless.
+- ⚡ **CLI Runner & Bash Shortcuts**: Shortcut CLI siap pakai (`create-va.sh`, `create-qris.sh`, `create-ewallet.sh`, `create-invoice.sh`, `find-invoice.sh`) untuk developer yang menyukai command line.
 - 🔐 **Hitung Otomatis Signature & Header**: Menghasilkan `X-SIGNATURE` (RSA-SHA256), `X-TIMESTAMP`, dan `X-EXTERNAL-ID` secara otomatis sesuai standar SNAP BI & Checkout Page.
 - 💾 **Auto-Save ID Transaksi (`db.json`)**: Menyimpan ID transaksi terakhir secara otomatis (seperti `lastContractId`, `lastTrxId`, `lastVirtualAccountNo`, `lastInvoiceId`, `lastWebRedirectUrl`) untuk mempermudah eksekusi request lanjutan (*Inquiry* / *Status*).
-- 🛠️ **Bash Helper Script**: Menyediakan shortcut CLI `.sh` yang dapat dipanggil langsung dari mana saja di terminal (`create-va.sh`, `create-qris.sh`, `create-ewallet.sh`, `create-invoice.sh`, `find-invoice.sh`).
+- 🚀 **Dual Deployment Ready**: Siap dideploy ke **Fly.io** (Fastify API backend via Docker) dan **Vercel** (Next.js Frontend).
 - ⚡ **3 Multi-Environment Support**: Mendukung `development`, `sandbox`, dan `production` secara dinamis tanpa mengubah kode.
+
 
 ---
 
@@ -283,12 +287,15 @@ Untuk menerima dan memvalidasi notifikasi pembayaran callback dari Winpay:
   - `POST http://localhost:3000/callback/checkout` : Receiver callback Checkout Page Invoice
   - `GET http://localhost:3000/health` : Cek status server & callback terakhir
 
-* **Uji Publikasi Webhook (Local to Public via ngrok / cloudflared):**
+* **Uji Publikasi Webhook (Local to Public via Cloudflare Tunnel / ngrok):**
   ```bash
-  # Menggunakan ngrok
-  ngrok http 3000
-  # Setel URL Callback di dashboard Winpay ke: https://<your-id>.ngrok-free.app/callback/snap
+  # Menggunakan Cloudflare Tunnel (Rekomendasi)
+  # Arahkan Service URL ke port Fastify API (default: http://localhost:3033 atau 3001)
+  # Setel URL Callback di dashboard Winpay:
+  # - SNAP BI: https://<domain-tunnel-anda>/api/callback/snap
+  # - Checkout Page: https://<domain-tunnel-anda>/api/callback/checkout
   ```
+
 
 ---
 
@@ -322,50 +329,78 @@ NODE_ENV=production node simulator.js snap createva
 
 ```text
 snap-checkout-simulator/
-├── config/
-│   ├── config.js                   # Pemetaan konfigurasi env & path RSA keys
-│   ├── validateEnv.js              # Validator env variabel
-│   ├── private_key_dev.pem         # [Ignored] RSA Private Key (DEV & Sandbox)
-│   ├── public_key_dev.pem          # [Ignored] RSA Public Key DEV (disetor ke Winpay)
-│   ├── private_key_prod.pem        # [Ignored] RSA Private Key (Production)
-│   ├── winpay_public_key_dev.pem   # [Ignored] Public Key Winpay DEV/Sandbox
-│   └── winpay_public_key_prod.pem  # [Ignored] Public Key Winpay Production
-├── helpers/
-│   ├── callback-verifier.js        # Verifikator X-SIGNATURE callback masuk (RSA/HMAC)
-│   ├── externalId.js               # Generator X-EXTERNAL-ID unik
-│   ├── logger.js                   # Logger konsol berwarna dengan timestamp
-│   ├── signature.js                # Generator X-SIGNATURE SNAP (RSA-SHA256)
-│   ├── signature-checkoutpage.js   # Generator Signature Checkout Page (HMAC-SHA256)
-│   ├── storage.js                  # Database lokal lowdb (db.json)
-│   ├── timestamp.js                # Generator Timestamp ISO 8601 (+07:00)
-│   └── trxId.js                    # Generator nomor referensi/transaksi acak
-├── services/
-│   ├── snap.js                     # HTTP Client API SNAP (VA, QRIS, eWallet)
-│   └── checkoutpage.js             # HTTP Client API Checkout Page (Invoice)
-├── templates/
-│   ├── snap/                       # Template Payload JSON SNAP API
-│   │   ├── createVA.js
-│   │   ├── createQRIS.js
-│   │   ├── createEwallet.js
-│   │   ├── inquiryVA.js
-│   │   └── paymentStatus.js
-│   └── checkoutpage/               # Template Payload JSON Checkout Page
-│       ├── createInvoice.js
-│       └── findInvoice.js
-├── create-va.sh                    # CLI Shortcut: Create VA SNAP
-├── create-qris.sh                  # CLI Shortcut: Generate QRIS SNAP
-├── create-ewallet.sh               # CLI Shortcut: Create eWallet SNAP
-├── create-invoice.sh               # CLI Shortcut: Create Invoice Checkout Page
-├── find-invoice.sh                 # CLI Shortcut: Find Invoice Checkout Page
-├── start-callback.sh               # CLI Shortcut: Jalankan Callback Server Receiver
-├── server.js                       # HTTP Server Webhook Callback Receiver
-├── .env                            # [Ignored] Konfigurasi environment lokal
-├── sample.env                      # Template referensi file .env
-├── db.json                         # [Ignored] Penyimpanan lokal state transaksi terakhir
-├── simulator.js                    # Entry point CLI Runner utama
-├── package.json                    # Konfigurasi dependensi Node.js
-└── README.md                       # Dokumentasi lengkap project
+├── backend/                    # Seluruh engine backend, API Fastify & CLI Simulator
+│   ├── api/                    # Fastify REST API Server (Port: 3001)
+│   ├── config/                 # Konfigurasi & RSA Keys
+│   ├── helpers/                # Signature, logger, timestamp, storage
+│   ├── services/               # HTTP Client SNAP & Checkout Page
+│   ├── templates/              # Payload JSON templates
+│   ├── simulator.js            # CLI Runner utama
+│   ├── server.js               # Webhook Callback Receiver standalone
+│   ├── Dockerfile              # Docker image untuk deploy ke Fly.io
+│   ├── .env                    # [Ignored] Kredensial lokal
+│   ├── sample.env              # Template referensi file .env
+│   ├── db.json                 # [Ignored] Database state transaksi lokal
+│   └── package.json            # Dependensi backend
+├── frontend/                   # Next.js 15+ App Router Web Dashboard (Port: 3000)
+│   ├── app/                    # Pages & Proxy Route Handlers
+│   ├── components/             # Reusable UI components
+│   ├── .env.local              # Konfigurasi frontend (API_URL)
+│   └── package.json            # Dependensi frontend
+├── scripts/                    # CLI Helper Shortcuts (*.sh)
+│   ├── create-va.sh            # CLI Shortcut: Create VA SNAP
+│   ├── create-qris.sh          # CLI Shortcut: Generate QRIS SNAP
+│   ├── create-ewallet.sh       # CLI Shortcut: Create eWallet SNAP
+│   ├── create-invoice.sh       # CLI Shortcut: Create Invoice Checkout Page
+│   ├── find-invoice.sh         # CLI Shortcut: Find Invoice Checkout Page
+│   └── start-callback.sh       # CLI Shortcut: Jalankan Callback Server Receiver
+├── docs/                       # Dokumentasi teknis terstruktur
+│   ├── architecture.md         # Diagram arsitektur & komponen
+│   ├── api-reference.md        # Dokumentasi REST API & Webhook
+│   ├── roadmap.md              # Roadmap pengembangan
+│   └── backlog.md              # Task backlog & tracking
+├── fly.toml                    # Konfigurasi deployment Fly.io
+├── vercel.json                 # Konfigurasi deployment Vercel
+├── package.json                # Workspace root runner (npm run api, npm run dev:all)
+└── README.md                   # Dokumentasi lengkap project
+
 ```
+
+---
+
+## 🚀 Cara Menjalankan Aplikasi
+
+### Opsi A: Mode Web Dashboard & REST API (Rekomendasi)
+```bash
+# 1. Jalankan Fastify REST API (Port 3001)
+npm run api
+
+# 2. Di terminal terpisah, jalankan Next.js Web Dashboard (Port 3000)
+npm run dev:frontend
+
+# Atau jalankan keduanya sekaligus:
+npm run dev:all
+```
+Buka browser di **`http://localhost:3000`** untuk mengakses Web Dashboard interaktif.
+
+### Opsi B: Mode CLI Shortcut (Terminal)
+```bash
+# Create VA (Bank BNC, Rp 50.000, Dev)
+./create-va.sh BNC 50000 dev
+
+# Generate QRIS (Rp 25.000, Sandbox)
+./create-qris.sh 25000 sandbox
+
+# Create eWallet (ShopeePay, Rp 10.000, Dev)
+./create-ewallet.sh SHOPEEPAY 10000 dev
+
+# Create Invoice (Rp 100.000, "Web Hosting Pro", Sandbox)
+./create-invoice.sh 100000 "Web Hosting Pro" sandbox
+
+# Find Invoice Terakhir
+./find-invoice.sh sandbox
+```
+
 
 ---
 

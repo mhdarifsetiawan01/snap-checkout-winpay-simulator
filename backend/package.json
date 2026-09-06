@@ -1,0 +1,24 @@
+{
+  "name": "snap-simulasi",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "api": "node api/server.js",
+    "api:dev": "node --watch api/server.js",
+    "callback": "node server.js",
+    "start": "node api/server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "axios": "^1.13.2",
+    "chalk": "^4.1.2",
+    "dotenv": "^17.2.3",
+    "fastify": "^5.12.3",
+    "lowdb": "^1.0.0"
+  }
+}
