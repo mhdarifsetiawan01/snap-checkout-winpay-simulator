@@ -247,6 +247,11 @@ Project ini menggunakan `lowdb@^1` (CommonJS). `lowdb@^2+` tidak kompatibel (ESM
 ### 7.5 Jangan Ganti `chalk@^4` ke Versi Lebih Tinggi Tanpa Izin
 `chalk@^5+` adalah ESM only. Project ini menggunakan CommonJS (`require`). Pertahankan `chalk@^4`.
 
+### 7.6 Mandatory Server Cleanup & Zero Dangling Background Test Server SOP (MANDATORY)
+- **STRICT PROHIBITION ON LEAVING BACKGROUND TEST SERVERS RUNNING**: AI Agent **WAJIB** mematikan (`manage_task(Action='kill')`) seluruh proses server dev/background (`npm run api:dev`, `npm run dev:frontend`, `server.js`, dll) yang dijalankan selama proses testing/validasi sebelum mengembalikan respon ke user.
+- **Port Collision Prevention**: Port `3033` (Fastify API) dan `3000` (Next.js Frontend) adalah hak kontrol eksklusif pengguna terminal. Membiarkan daemon background aktif menyebabkan error `EADDRINUSE: address already in use 0.0.0.0:3033` dan mengganggu alur pengujian user.
+- **SOP Step**: Sebelum menyatakan tugas selesai atau menunggu input user, jalankan `manage_task(Action='list')` dan pastikan 0 background test server tersisa.
+
 ---
 
 ## 🔄 8. Alur Kerja Implementasi (SOP untuk Agent)

@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import ResponseViewer from '@/components/shared/ResponseViewer';
+import { useCustomCheckoutCredentials } from '@/lib/useEnv';
 
 export default function CreateInvoiceForm({ env }) {
   const [price,          setPrice]          = useState('100000');
@@ -9,6 +10,7 @@ export default function CreateInvoiceForm({ env }) {
   const [loading,        setLoading]        = useState(false);
   const [result,         setResult]         = useState(null);
   const [isError,        setIsError]        = useState(false);
+  const [customCheckout]                    = useCustomCheckoutCredentials();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -22,6 +24,8 @@ export default function CreateInvoiceForm({ env }) {
           productName,
           interval: Number(expiredMinutes) || 5,
           env,
+          clientKey: customCheckout.clientKey || undefined,
+          secretKey: customCheckout.secretKey || undefined,
         }),
       });
       const data = await r.json();
@@ -35,7 +39,12 @@ export default function CreateInvoiceForm({ env }) {
     }
   };
 
-  const redirectUrl = result?.data?.responseData?.redirectUrl;
+  const redirectUrl =
+    result?.data?.responseData?.redirect_url ||
+    result?.data?.responseData?.redirectUrl ||
+    result?.data?.redirect_url ||
+    result?.data?.redirectUrl ||
+    result?.data?.url;
 
   return (
     <div>

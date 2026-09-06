@@ -87,3 +87,58 @@ export function useCustomPartnerId() {
   return [customPartnerId, setCustomPartnerId, isMounted];
 }
 
+const CHECKOUT_CLIENT_KEY_STORAGE = 'winpay_custom_checkout_client_key';
+const CHECKOUT_SECRET_KEY_STORAGE = 'winpay_custom_checkout_secret_key';
+
+export function useCustomCheckoutCredentials() {
+  const [customClientKey, setCustomClientKeyState] = useState('');
+  const [customSecretKey, setCustomSecretKeyState] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+    try {
+      const savedClient = localStorage.getItem(CHECKOUT_CLIENT_KEY_STORAGE);
+      const savedSecret = localStorage.getItem(CHECKOUT_SECRET_KEY_STORAGE);
+      if (savedClient) setCustomClientKeyState(savedClient);
+      if (savedSecret) setCustomSecretKeyState(savedSecret);
+    } catch {}
+  }, []);
+
+  const setCustomCredentials = (clientKey, secretKey) => {
+    const cleanClient = String(clientKey || '').trim();
+    const cleanSecret = String(secretKey || '').trim();
+    setCustomClientKeyState(cleanClient);
+    setCustomSecretKeyState(cleanSecret);
+    try {
+      if (cleanClient) {
+        localStorage.setItem(CHECKOUT_CLIENT_KEY_STORAGE, cleanClient);
+      } else {
+        localStorage.removeItem(CHECKOUT_CLIENT_KEY_STORAGE);
+      }
+      if (cleanSecret) {
+        localStorage.setItem(CHECKOUT_SECRET_KEY_STORAGE, cleanSecret);
+      } else {
+        localStorage.removeItem(CHECKOUT_SECRET_KEY_STORAGE);
+      }
+    } catch {}
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('winpay-checkout-cred-change', {
+        detail: { clientKey: cleanClient, secretKey: cleanSecret }
+      }));
+    }
+  };
+
+  useEffect(() => {
+    const handleCredChange = (e) => {
+      if (e.detail) {
+        setCustomClientKeyState(e.detail.clientKey || '');
+        setCustomSecretKeyState(e.detail.secretKey || '');
+      }
+    };
+    window.addEventListener('winpay-checkout-cred-change', handleCredChange);
+    return () => window.removeEventListener('winpay-checkout-cred-change', handleCredChange);
+  }, []);
+
+  return [{ clientKey: customClientKey, secretKey: customSecretKey }, setCustomCredentials, isMounted];
+}

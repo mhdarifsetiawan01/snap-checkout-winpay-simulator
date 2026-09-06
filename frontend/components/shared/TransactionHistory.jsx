@@ -407,25 +407,35 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
                         ⚠️ {tx.errorMessage}
                       </div>
                     )}
-                    {tx.webRedirectUrl && (
-                      <div style={{ marginTop: 4 }}>
-                        <a
-                          href={tx.webRedirectUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          style={{
-                            fontSize: '11px',
-                            color: '#38bdf8',
-                            textDecoration: 'underline',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 3,
-                          }}
-                        >
-                          🔗 Buka Link Bayar ↗
-                        </a>
-                      </div>
-                    )}
+                    {(() => {
+                      const linkUrl =
+                        tx.redirect_url ||
+                        tx.webRedirectUrl ||
+                        tx.redirectUrl ||
+                        tx.rawResponse?.responseData?.redirect_url ||
+                        tx.rawResponse?.responseData?.redirectUrl ||
+                        tx.rawResponse?.redirect_url;
+                      if (!linkUrl) return null;
+                      return (
+                        <div style={{ marginTop: 4 }}>
+                          <a
+                            href={linkUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            style={{
+                              fontSize: '11px',
+                              color: '#38bdf8',
+                              textDecoration: 'underline',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 3,
+                            }}
+                          >
+                            🔗 Buka Link Bayar ↗
+                          </a>
+                        </div>
+                      );
+                    })()}
                   </td>
 
                   {/* Nominal */}

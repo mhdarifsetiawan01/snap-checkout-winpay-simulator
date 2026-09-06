@@ -4,7 +4,7 @@ require("dotenv").config({ path: require("path").resolve(__dirname, "../../.env"
 
 const checkoutService = require("../../services/checkoutpage");
 const { createInvoiceBody } = require("../../templates/checkoutpage/createInvoice");
-const { getKey, recordTransaction, updateTransactionStatus } = require("../../helpers/storage");
+const { getKey, saveKey, recordTransaction, updateTransactionStatus } = require("../../helpers/storage");
 
 function applyEnvOverride(envParam) {
   const allowed = ["development", "sandbox", "production", "prod"];
@@ -21,13 +21,20 @@ function applyEnvOverride(envParam) {
 async function checkoutPageRoutes(fastify) {
   // ─── Create Invoice ──────────────────────────────────────────────────────
   fastify.post("/checkout/invoice", async (request, reply) => {
-    const { price, productName, interval, expiredMinutes, env } = request.body || {};
+    const { price, productName, interval, expiredMinutes, env, clientKey, secretKey } = request.body || {};
     let payload = null;
     try {
       applyEnvOverride(env || request.query.env);
 
       if (!price)       return reply.code(400).send({ error: "Field 'price' wajib diisi" });
       if (!productName) return reply.code(400).send({ error: "Field 'productName' wajib diisi" });
+
+      if (clientKey && String(clientKey).trim() !== "") {
+        process.env.CHECKOUT_CLIENT_KEY_OVERRIDE = String(clientKey).trim();
+      }
+      if (secretKey && String(secretKey).trim() !== "") {
+        process.env.CHECKOUT_SECRET_KEY_OVERRIDE = String(secretKey).trim();
+      }
 
       // Inject ke env agar template bisa baca
       process.env.PRICE        = String(price);
@@ -39,17 +46,24 @@ async function checkoutPageRoutes(fastify) {
 
       delete process.env.PRICE;
       delete process.env.PRODUCT_NAME;
+      delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+      delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
 
-      const invoiceId = result?.invoiceId || result?.data?.id || getKey("lastInvoiceId");
-      const redirectUrl = result?.url || result?.redirectUrl || result?.data?.url || getKey("lastWebRedirectUrl");
+      const invoiceId = result?.responseData?.id || result?.invoiceId || result?.data?.id || getKey("lastInvoiceId");
+      const redirectUrl = result?.responseData?.redirect_url || result?.responseData?.redirectUrl || result?.redirect_url || result?.redirectUrl || result?.data?.redirect_url || result?.data?.url;
+
+      if (redirectUrl) {
+        await saveKey("lastWebRedirectUrl", redirectUrl);
+      }
 
       recordTransaction("checkout", {
         type: "INVOICE",
         channel: "Checkout Page",
         invoiceId: invoiceId,
-        partnerReferenceNo: payload.reference,
+        partnerReferenceNo: payload.invoice?.ref || payload.reference,
         amount: price,
         webRedirectUrl: redirectUrl,
+        redirect_url: redirectUrl,
         status: "PENDING",
         env: process.env.NODE_ENV,
         rawResponse: result,
@@ -59,6 +73,8 @@ async function checkoutPageRoutes(fastify) {
     } catch (err) {
       delete process.env.PRICE;
       delete process.env.PRODUCT_NAME;
+      delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+      delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
 
       let errorMsg = err.message;
       try {

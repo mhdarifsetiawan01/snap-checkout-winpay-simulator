@@ -11,15 +11,17 @@ const httpAgent = new http.Agent({ family: 4, keepAlive: false });
 const httpsAgent = new https.Agent({ family: 4, keepAlive: false });
 
 async function sendRequest(endpoint, payload, simulate = true) {
+  const clientKey = process.env.CHECKOUT_CLIENT_KEY_OVERRIDE || CONFIG.CHECKOUT_CLIENT_KEY;
+  const secretKey = process.env.CHECKOUT_SECRET_KEY_OVERRIDE || CONFIG.CHECKOUT_SECRET_KEY;
   const url = `${CONFIG.CHECKOUT_BASE_URL}${endpoint}`;
   const timestamp = generateTimestamp();
-  const signature = generateCheckoutPageSignature(timestamp, CONFIG.CHECKOUT_SECRET_KEY);
+  const signature = generateCheckoutPageSignature(timestamp, secretKey);
   
   const headers = {
     "Content-Type": "application/json",
     "X-Winpay-Timestamp": timestamp,
     "X-Winpay-Signature": signature,
-    "X-Winpay-Key": CONFIG.CHECKOUT_CLIENT_KEY,
+    "X-Winpay-Key": clientKey,
   };
   
   if (!simulate) {
@@ -68,15 +70,17 @@ async function createinvoice(payload, simulate = true) {
  * Find Invoice (GET)
  */
 async function findinvoice(invoiceId, simulate = true) {
+  const clientKey = process.env.CHECKOUT_CLIENT_KEY_OVERRIDE || CONFIG.CHECKOUT_CLIENT_KEY;
+  const secretKey = process.env.CHECKOUT_SECRET_KEY_OVERRIDE || CONFIG.CHECKOUT_SECRET_KEY;
   const path = `/api/find/${invoiceId}`;
   const url = `${CONFIG.CHECKOUT_BASE_URL}${path}`;
   const timestamp = generateTimestamp();
-  const signature = generateCheckoutPageSignature(timestamp, CONFIG.CHECKOUT_SECRET_KEY);
+  const signature = generateCheckoutPageSignature(timestamp, secretKey);
 
   const headers = {
     "X-Winpay-Timestamp": timestamp,
     "X-Winpay-Signature": signature,
-    "X-Winpay-Key": CONFIG.CHECKOUT_CLIENT_KEY,
+    "X-Winpay-Key": clientKey,
   };
 
   if (simulate) {

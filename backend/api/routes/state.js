@@ -104,7 +104,19 @@ async function stateRoutes(fastify) {
         }
       } else if (txType === "INVOICE" || txType === "CHECKOUT") {
         if (!invoiceId) return reply.code(400).send({ success: false, error: "invoiceId required" });
+        const { clientKey, secretKey } = request.body || {};
+        if (clientKey && String(clientKey).trim() !== "") {
+          process.env.CHECKOUT_CLIENT_KEY_OVERRIDE = String(clientKey).trim();
+        }
+        if (secretKey && String(secretKey).trim() !== "") {
+          process.env.CHECKOUT_SECRET_KEY_OVERRIDE = String(secretKey).trim();
+        }
+
         result = await checkoutService.findinvoice(invoiceId, false);
+
+        delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+        delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
+
         const responseData = result?.responseData || result?.data || {};
         const statusStr = String(responseData.status || result?.status || "").toUpperCase();
         if (["SETTLED", "PAID", "SUCCESS", "0000"].includes(statusStr)) {
@@ -123,6 +135,8 @@ async function stateRoutes(fastify) {
       }
 
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
+      delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+      delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
 
       const updatedTx = updateTransactionStatus(
         { id, trxId, virtualAccountNo, invoiceId },
@@ -138,6 +152,8 @@ async function stateRoutes(fastify) {
       });
     } catch (err) {
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
+      delete process.env.CHECKOUT_CLIENT_KEY_OVERRIDE;
+      delete process.env.CHECKOUT_SECRET_KEY_OVERRIDE;
       return reply.code(500).send({ success: false, error: err.message });
     }
   });
@@ -174,6 +190,12 @@ async function stateRoutes(fastify) {
         ? process.env.CHECKOUT_CLIENT_KEY_SANDBOX
         : process.env.CHECKOUT_CLIENT_KEY_DEV;
 
+    const checkoutSecretKey = isProd
+      ? process.env.CHECKOUT_SECRET_KEY_PROD
+      : isSandbox
+        ? process.env.CHECKOUT_SECRET_KEY_SANDBOX
+        : process.env.CHECKOUT_SECRET_KEY_DEV;
+
     const enableIpWhitelist = process.env.ENABLE_IP_WHITELIST === "true" || process.env.ENABLE_IP_WHITELIST === "1";
     const allowedIps = (process.env.ALLOWED_IPS || "").split(",").map(s => s.trim()).filter(Boolean);
 
@@ -194,6 +216,7 @@ async function stateRoutes(fastify) {
         checkout: {
           baseUrl: checkoutBaseUrl || "—",
           clientKey: checkoutClientKey || "—",
+          secretKey: checkoutSecretKey || "—",
         },
       },
     });
