@@ -21,7 +21,7 @@ function applyEnvOverride(envParam) {
 async function checkoutPageRoutes(fastify) {
   // ─── Create Invoice ──────────────────────────────────────────────────────
   fastify.post("/checkout/invoice", async (request, reply) => {
-    const { price, productName, env } = request.body || {};
+    const { price, productName, interval, expiredMinutes, env } = request.body || {};
     let payload = null;
     try {
       applyEnvOverride(env || request.query.env);
@@ -33,7 +33,8 @@ async function checkoutPageRoutes(fastify) {
       process.env.PRICE        = String(price);
       process.env.PRODUCT_NAME = String(productName);
 
-      payload = createInvoiceBody();
+      const intervalMins = Number(expiredMinutes || interval) > 0 ? Number(expiredMinutes || interval) : 5;
+      payload = createInvoiceBody({ interval: intervalMins });
       const result  = await checkoutService.createinvoice(payload, false);
 
       delete process.env.PRICE;

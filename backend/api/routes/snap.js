@@ -10,6 +10,7 @@ const { createEwalletBody }  = require("../../templates/snap/createEwallet");
 const { inquiryVABody }      = require("../../templates/snap/inquiryVA");
 const { paymentStatusBody }  = require("../../templates/snap/paymentStatus");
 const { deleteVABody }       = require("../../templates/snap/deleteVA");
+const { generateTimestamp }  = require("../../helpers/timestamp");
 const { getKey, getTransactions, recordTransaction, updateTransactionStatus } = require("../../helpers/storage");
 
 /**
@@ -40,7 +41,7 @@ function applyEnvOverride(envParam) {
 async function snapRoutes(fastify) {
   // ─── Create Virtual Account ─────────────────────────────────────────────
   fastify.post("/snap/va", async (request, reply) => {
-    const { channel, amount, env, partnerId } = request.body || {};
+    const { channel, amount, expiredMinutes, env, partnerId } = request.body || {};
     let payload = null;
     try {
       applyEnvOverride(env || request.query.env);
@@ -57,6 +58,9 @@ async function snapRoutes(fastify) {
       process.env.AMOUNT  = String(amount);
 
       payload = createVABody();
+      const mins = Number(expiredMinutes) > 0 ? Number(expiredMinutes) : 5;
+      payload.expiredDate = generateTimestamp(mins);
+
       const result  = await snapService.createva(payload, false);
 
       delete process.env.CHANNEL;
@@ -110,28 +114,53 @@ async function snapRoutes(fastify) {
   // ─── Inquiry VA ─────────────────────────────────────────────────────────
   fastify.post("/snap/inquiry-va", async (request, reply) => {
     try {
-      const { env, partnerId, virtualAccountNo, trxId } = request.body || {};
+      const { env, partnerId, virtualAccountNo, trxId, contractId, channel } = request.body || {};
       applyEnvOverride(env || request.query.env);
 
       if (partnerId && String(partnerId).trim() !== "") {
         process.env.SNAP_PARTNER_ID_OVERRIDE = String(partnerId).trim();
       }
 
-      const payload = inquiryVABody();
-      if (virtualAccountNo) payload.virtualAccountNo = virtualAccountNo;
-      if (trxId) payload.trxId = trxId;
+      let txContractId = contractId;
+      let txChannel = channel;
+      let txTrxId = trxId;
+      let txVaNo = virtualAccountNo;
+
+      if (trxId || virtualAccountNo) {
+        const allVAs = getTransactions("va", 50);
+        const matched = allVAs.find(t => (trxId && t.trxId === trxId) || (virtualAccountNo && t.virtualAccountNo === virtualAccountNo));
+        if (matched) {
+          txContractId = txContractId || matched.contractId || matched.rawResponse?.virtualAccountData?.additionalInfo?.contractId || matched.rawResponse?.additionalInfo?.contractId;
+          txChannel = txChannel || matched.channel || matched.rawResponse?.virtualAccountData?.additionalInfo?.channel;
+          txTrxId = txTrxId || matched.trxId;
+          txVaNo = txVaNo || matched.virtualAccountNo;
+        }
+      }
+
+      const payload = {
+        trxId: txTrxId || getKey("lastTrxId"),
+        additionalInfo: {
+          contractId: txContractId || getKey("lastContractId"),
+        },
+      };
 
       const result = await snapService.inquiryva(payload, false);
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
 
-      // Update status jika inquiry mengindikasikan status bayar
-      const paidStatus = result?.virtualAccountData?.paidStatus || result?.paidStatus;
-      if (paidStatus === "PAID" || paidStatus === "SUCCESS" || result?.responseCode === "2002500") {
-        updateTransactionStatus(
-          { virtualAccountNo: payload.virtualAccountNo, trxId: payload.trxId },
-          "PAID",
-          { rawStatusResponse: result }
-        );
+      // Update status jika inquiry mengindikasikan status bayar atau expired
+      const vaData = result?.virtualAccountData || {};
+      const expDateStr = vaData.expiredDate;
+      if (expDateStr) {
+        try {
+          const expTime = new Date(expDateStr).getTime();
+          if (!isNaN(expTime) && Date.now() > expTime) {
+            updateTransactionStatus(
+              { virtualAccountNo: txVaNo || vaData.virtualAccountNo, trxId: payload.trxId },
+              "EXPIRED",
+              { rawInquiryResponse: result }
+            );
+          }
+        } catch (_) {}
       }
 
       return reply.send({ success: true, data: result });
@@ -281,7 +310,7 @@ async function snapRoutes(fastify) {
 
   // ─── Create QRIS ─────────────────────────────────────────────────────────
   fastify.post("/snap/qris", async (request, reply) => {
-    const { amount, env, partnerId } = request.body || {};
+    const { amount, expiredMinutes, env, partnerId } = request.body || {};
     let payload = null;
     try {
       applyEnvOverride(env || request.query.env);
@@ -294,6 +323,9 @@ async function snapRoutes(fastify) {
 
       process.env.AMOUNT = String(amount);
       payload = createQRISBody();
+      const mins = Number(expiredMinutes) > 0 ? Number(expiredMinutes) : 5;
+      payload.validityPeriod = generateTimestamp(mins);
+
       const result = await snapService.createqris(payload, false);
       delete process.env.AMOUNT;
       delete process.env.SNAP_PARTNER_ID_OVERRIDE;
@@ -338,7 +370,7 @@ async function snapRoutes(fastify) {
 
   // ─── Create eWallet ──────────────────────────────────────────────────────
   fastify.post("/snap/ewallet", async (request, reply) => {
-    const { channel, amount, env, partnerId } = request.body || {};
+    const { channel, amount, expiredMinutes, env, partnerId } = request.body || {};
     let payload = null;
     try {
       applyEnvOverride(env || request.query.env);
@@ -354,6 +386,9 @@ async function snapRoutes(fastify) {
       process.env.AMOUNT  = String(amount);
 
       payload = createEwalletBody();
+      const mins = Number(expiredMinutes) > 0 ? Number(expiredMinutes) : 5;
+      payload.validUpTo = generateTimestamp(mins);
+
       const result = await snapService.createewallet(payload, false);
 
       delete process.env.CHANNEL;

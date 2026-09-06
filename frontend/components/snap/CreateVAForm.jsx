@@ -6,11 +6,12 @@ import { useCustomPartnerId } from '@/lib/useEnv';
 const VA_CHANNELS = ['PERMATA', 'BRI', 'BNI', 'BCA', 'MANDIRI', 'INDOMARET', 'BTN', 'CIMB'];
 
 export default function CreateVAForm({ env }) {
-  const [channel, setChannel] = useState('PERMATA');
-  const [amount,  setAmount]  = useState('15000');
-  const [loading, setLoading] = useState(false);
-  const [result,  setResult]  = useState(null);
-  const [isError, setIsError] = useState(false);
+  const [channel,        setChannel]        = useState('PERMATA');
+  const [amount,         setAmount]         = useState('15000');
+  const [expiredMinutes, setExpiredMinutes] = useState('5');
+  const [loading,        setLoading]        = useState(false);
+  const [result,         setResult]         = useState(null);
+  const [isError,        setIsError]        = useState(false);
   const [customPartnerId] = useCustomPartnerId();
 
   const handleSubmit = async (e) => {
@@ -23,6 +24,7 @@ export default function CreateVAForm({ env }) {
         body: JSON.stringify({
           channel,
           amount,
+          expiredMinutes: Number(expiredMinutes) || 5,
           env,
           partnerId: customPartnerId || undefined,
         }),
@@ -54,6 +56,21 @@ export default function CreateVAForm({ env }) {
             className="form-input" type="number" min="1000"
             value={amount} onChange={e => setAmount(e.target.value)}
             placeholder="15000"
+          />
+        </div>
+        <div className="form-group">
+          <div className="flex justify-between items-center">
+            <label className="form-label">Expired Time (Menit)</label>
+            <span className="text-xs text-muted">Default: 5 Menit</span>
+          </div>
+          <input
+            className="form-input"
+            type="number"
+            min="1"
+            max="43200"
+            value={expiredMinutes}
+            onChange={e => setExpiredMinutes(e.target.value)}
+            placeholder="5"
           />
         </div>
         <button className="btn btn-primary btn-full" type="submit" disabled={loading}>

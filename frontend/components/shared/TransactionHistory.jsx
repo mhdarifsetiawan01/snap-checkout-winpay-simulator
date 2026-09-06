@@ -15,7 +15,9 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
   const [loading, setLoading] = useState(false);
   const [checkingId, setCheckingId] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [inquiringId, setInquiringId] = useState(null);
   const [selectedTx, setSelectedTx] = useState(null);
+  const [inquiryModalData, setInquiryModalData] = useState(null);
   const [feedback, setFeedback] = useState(null);
 
   const fetchTransactions = useCallback(async () => {
@@ -76,6 +78,49 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
     } finally {
       setCheckingId(null);
       setTimeout(() => setFeedback(null), 4000);
+    }
+  };
+
+  const handleInquiryVA = async (tx) => {
+    setInquiringId(tx.id);
+    setFeedback(null);
+    try {
+      const res = await fetch('/api/snap/inquiry-va', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trxId: tx.trxId,
+          contractId: tx.contractId || tx.rawResponse?.virtualAccountData?.additionalInfo?.contractId,
+          virtualAccountNo: tx.virtualAccountNo,
+          channel: tx.channel,
+          env: tx.env,
+        }),
+      });
+      const json = await res.json();
+      setInquiryModalData({ tx, response: json, isError: !res.ok || !json.success });
+      if (json.success && (json.data?.responseCode === '2003000' || json.data?.responseCode === '200')) {
+        const vaData = json.data?.virtualAccountData || {};
+        const exp = vaData.expiredDate ? ` | Expired: ${vaData.expiredDate}` : '';
+        setFeedback({
+          type: 'success',
+          msg: `Inquiry VA Sukses: VA ${vaData.virtualAccountNo || tx.virtualAccountNo} (${vaData.virtualAccountName || 'Aktif'})${exp}`,
+        });
+        fetchTransactions();
+      } else {
+        const errMsg = json.data?.responseMessage || json.error || (typeof json.data === 'object' ? JSON.stringify(json.data) : 'Inquiry VA respon tidak sukses');
+        setFeedback({
+          type: 'error',
+          msg: `Inquiry VA Respon: ${errMsg}`,
+        });
+      }
+    } catch (err) {
+      setFeedback({
+        type: 'error',
+        msg: `Error jaringan: ${err.message}`,
+      });
+    } finally {
+      setInquiringId(null);
+      setTimeout(() => setFeedback(null), 5000);
     }
   };
 
@@ -401,17 +446,37 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
                   {/* Aksi */}
                   <td style={{ padding: '10px 8px', verticalAlign: 'top', textAlign: 'right' }}>
                     <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                      {tx.type === 'VA' && tx.status !== 'CANCELLED' && (
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => handleInquiryVA(tx)}
+                          disabled={inquiringId === tx.id || checkingId === tx.id || deletingId === tx.id}
+                          style={{
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            borderRadius: '5px',
+                            fontWeight: 500,
+                            color: '#38bdf8',
+                            borderColor: 'rgba(56, 189, 248, 0.3)',
+                            background: 'rgba(56, 189, 248, 0.08)',
+                          }}
+                          title="Inquiry Virtual Account ke Winpay (Cek apakah VA aktif & expired date)"
+                        >
+                          {inquiringId === tx.id ? <span className="spinner" /> : '🔍 Inquiry VA'}
+                        </button>
+                      )}
                       {tx.status !== 'FAILED' && tx.status !== 'CANCELLED' && (
                         <button
                           className="btn btn-secondary"
                           onClick={() => handleCheckStatus(tx)}
-                          disabled={checkingId === tx.id || deletingId === tx.id}
+                          disabled={checkingId === tx.id || deletingId === tx.id || inquiringId === tx.id}
                           style={{
                             padding: '4px 8px',
                             fontSize: '11px',
                             borderRadius: '5px',
                             fontWeight: 500,
                           }}
+                          title="Cek Status Pembayaran"
                         >
                           {checkingId === tx.id ? <span className="spinner" /> : '↻ Cek Status'}
                         </button>
@@ -420,7 +485,7 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
                         <button
                           className="btn btn-secondary"
                           onClick={() => handleDeleteVA(tx)}
-                          disabled={deletingId === tx.id || checkingId === tx.id}
+                          disabled={deletingId === tx.id || checkingId === tx.id || inquiringId === tx.id}
                           style={{
                             padding: '4px 8px',
                             fontSize: '11px',
@@ -453,6 +518,111 @@ export default function TransactionHistory({ defaultCategory = 'all', title = 'D
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Inquiry VA Result Modal */}
+      {inquiryModalData && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(5px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: 16,
+          }}
+          onClick={() => setInquiryModalData(null)}
+        >
+          <div
+            className="card"
+            style={{
+              maxWidth: 680,
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              background: '#13131c',
+              border: inquiryModalData.isError
+                ? '1px solid rgba(239, 68, 68, 0.4)'
+                : '1px solid rgba(56, 189, 248, 0.4)',
+              padding: 22,
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>🔍</span> Respon Inquiry VA (Service Code: 30)
+              </h3>
+              <button
+                onClick={() => setInquiryModalData(null)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Overview Banner */}
+            <div
+              style={{
+                background: inquiryModalData.isError ? 'rgba(239, 68, 68, 0.1)' : 'rgba(56, 189, 248, 0.1)',
+                border: `1px solid ${inquiryModalData.isError ? 'rgba(239, 68, 68, 0.3)' : 'rgba(56, 189, 248, 0.3)'}`,
+                borderRadius: 8,
+                padding: '12px 14px',
+                marginBottom: 16,
+                fontSize: '12px',
+              }}
+            >
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
+                <div>
+                  <span className="text-muted">Nomor VA: </span>
+                  <strong style={{ color: '#38bdf8' }}>
+                    {inquiryModalData.response?.data?.virtualAccountData?.virtualAccountNo ||
+                     inquiryModalData.tx?.virtualAccountNo || '—'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted">Nama: </span>
+                  <strong>
+                    {inquiryModalData.response?.data?.virtualAccountData?.virtualAccountName || '—'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted">Expired Date: </span>
+                  <strong style={{ color: inquiryModalData.response?.data?.virtualAccountData?.expiredDate ? '#fb923c' : 'inherit' }}>
+                    {inquiryModalData.response?.data?.virtualAccountData?.expiredDate || 'Tidak ada di response'}
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted">Response Code: </span>
+                  <strong style={{ color: inquiryModalData.isError ? '#f87171' : '#4ade80' }}>
+                    {inquiryModalData.response?.data?.responseCode || inquiryModalData.response?.responseCode || (inquiryModalData.isError ? 'Error' : '2003000')}
+                  </strong>
+                </div>
+              </div>
+            </div>
+
+            <div className="response-body" style={{ background: 'var(--bg-input)', borderRadius: 8, padding: 12 }}>
+              <pre style={{ fontSize: '11px', lineHeight: 1.5, overflowX: 'auto', color: '#e2e8f0' }}>
+                {JSON.stringify(inquiryModalData.response, null, 2)}
+              </pre>
+            </div>
+
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn btn-secondary" onClick={() => setInquiryModalData(null)} style={{ padding: '6px 14px' }}>
+                Tutup
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

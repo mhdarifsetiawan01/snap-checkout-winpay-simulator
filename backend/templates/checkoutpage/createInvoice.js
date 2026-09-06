@@ -19,7 +19,7 @@ function createInvoiceBody(defaults = {}) {
       ]
     },
     back_url: defaults.back_url || "https://your-invoice-url.com",
-    interval: defaults.interval || 60
+    interval: defaults.interval || 5
   };
 }
 

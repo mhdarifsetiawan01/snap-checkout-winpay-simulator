@@ -25,7 +25,7 @@ function createEwalletBody() {
         isDeeplink: "N"
       }
     ],
-    validUpTo: generateTimestamp(15),
+    validUpTo: generateTimestamp(5),
     additionalInfo: {
       channel: process.env.CHANNEL || "SPAY",
       customerPhone: process.env.CUSTOMER_PHONE || "081234567890",

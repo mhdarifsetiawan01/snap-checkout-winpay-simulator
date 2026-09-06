@@ -16,7 +16,7 @@ function createVABody() {
       currency: "IDR"
     },
     virtualAccountTrxType: "c",
-    expiredDate: generateTimestamp(25),
+    expiredDate: generateTimestamp(5),
     additionalInfo: {
       channel: process.env.CHANNEL || "PERMATA",
     }
