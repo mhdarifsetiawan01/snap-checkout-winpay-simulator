@@ -28,11 +28,13 @@ db.defaults({
 
 // simpan key apapun
 function saveKey(key, value) {
+  db.read();
   db.set(key, value).write();
 }
 
 // ambil key apapun
 function getKey(key) {
+  db.read();
   return db.get(key).value();
 }
 
@@ -42,6 +44,7 @@ function getKey(key) {
  * @param {Object} data
  */
 function recordTransaction(category, data) {
+  db.read();
   const validCategory = (category || "va").toLowerCase();
   const currentList = db.get(`transactions.${validCategory}`).value() || [];
 
@@ -84,6 +87,7 @@ function recordTransaction(category, data) {
  * @param {Object} [extraData] - optional callback or inquiry response data
  */
 function updateTransactionStatus(query, newStatus, extraData = {}) {
+  db.read();
   const categories = ["va", "qris", "ewallet", "checkout"];
   let updatedTx = null;
 
@@ -156,6 +160,7 @@ function checkIfTxExpired(tx) {
  * @param {number} [limit=10]
  */
 function getTransactions(category = "all", limit = 10) {
+  db.read();
   const categories = ["va", "qris", "ewallet", "checkout"];
   let hasDbChanges = false;
 
